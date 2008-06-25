@@ -265,7 +265,9 @@ endfunction
 
 " mark or unmark a regular expression
 function! s:DoMark(...) " DoMark(regexp)
-	let lastwinnr = winnr()
+	" define variables if they don't exist
+	call s:InitMarkVariables()
+
 	" clear all marks if regexp is null
 	let regexp = ""
 	if a:0 > 0
@@ -276,6 +278,7 @@ function! s:DoMark(...) " DoMark(regexp)
 		while i <= g:mwCycleMax
 			if g:mwWord{i} != ""
 				let g:mwWord{i} = ""
+				let lastwinnr = winnr()
 				exe "windo syntax clear MarkWord" . i
 				exe lastwinnr . "wincmd w"
 			endif
@@ -293,6 +296,7 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ""
 			endif
 			let g:mwWord{i} = ""
+			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			exe lastwinnr . "wincmd w"
 			return 0
@@ -335,6 +339,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
+			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -358,6 +363,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
+			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -371,8 +377,11 @@ endfunction
 
 " update mark colors
 function! s:UpdateMark()
+	" define variables if they don't exist
+	call s:InitMarkVariables()
+
 	" Make the match according to the 'ignorecase' setting, like the star command. 
-	exe "syntax case " . (&ignorecase ? 'ignore' : 'match')
+	exe "windo syntax case " . (&ignorecase ? 'ignore' : 'match')
 
 	let i = 1
 	while i <= g:mwCycleMax
@@ -402,6 +411,9 @@ endfunction
 
 " return the mark string under the cursor. multi-lines marks not supported
 function! s:CurrentMark()
+	" define variables if they don't exist
+	call s:InitMarkVariables()
+
 	let line = getline(".")
 	let i = 1
 	while i <= g:mwCycleMax
@@ -449,6 +461,9 @@ endfunction
 
 " combine all marks into one regexp
 function! s:AnyMark()
+	" define variables if they don't exist
+	call s:InitMarkVariables()
+
 	let w = ""
 	let i = 1
 	while i <= g:mwCycleMax
@@ -504,10 +519,6 @@ function! s:SearchNext(...) " SearchNext(flags)
 		return 0
 	endif
 endfunction
-
-
-" Define global variables once
-call s:InitMarkVariables()
 
 " Restore previous 'cpo' value
 let &cpo = s:save_cpo
