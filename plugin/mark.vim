@@ -111,6 +111,8 @@ vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call
 	\ <sid>MarkRegex(<sid>GetVisualSelectionEscaped("N"))<cr>
 nnoremap <silent> <Plug>MarkClear :call
 	\ <sid>DoMark(<sid>CurrentMark())<cr>
+nnoremap <silent> <Plug>MarkAllClear :call
+	\ <sid>DoMark()<cr>
 
 " Here is a sumerization of the following keys' behaviors:
 " 
@@ -133,19 +135,45 @@ nnoremap <silent> <Plug>MarkClear :call
 "       do a \*; otherwise (\/ is the
 "       most recently used), do a \/.
 
-nnoremap <silent> <leader>* :call <sid>SearchCurrentMark()<cr>
-nnoremap <silent> <leader># :call <sid>SearchCurrentMark("b")<cr>
-nnoremap <silent> <leader>/ :call <sid>SearchAnyMark()<cr>
-nnoremap <silent> <leader>? :call <sid>SearchAnyMark("b")<cr>
-nnoremap <silent> * :if !<sid>SearchNext()<bar>execute "norm! *"<bar>endif<cr>
-nnoremap <silent> # :if !<sid>SearchNext("b")<bar>execute "norm! #"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkSearchCurrentNext :call <sid>SearchCurrentMark()<cr>
+nnoremap <silent> <Plug>MarkSearchCurrentPrev :call <sid>SearchCurrentMark("b")<cr>
+nnoremap <silent> <Plug>MarkSearchAnyNext     :call <sid>SearchAnyMark()<cr>
+nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <sid>SearchAnyMark("b")<cr>
+nnoremap <silent> <Plug>MarkSearchNext        :if !<sid>SearchNext()<bar>execute "norm! *"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkSearchPrev        :if !<sid>SearchNext("b")<bar>execute "norm! #"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkGotoNext          :if !<sid>SearchNext()<bar>execute "norm! nzv"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkGotoPrev          :if !<sid>SearchNext("b")<bar>execute "norm! Nzv"<bar>endif<cr>
+" When typed, 'n' opens the fold at the search result, but inside a mapping or
+" :normal this must be done explicitly via 'zv'. 
+
+
+if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
+	nmap <unique> <silent> <leader>* <Plug>MarkSearchCurrentNext
+endif
+if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
+	nmap <unique> <silent> <leader># <Plug>MarkSearchCurrentPrev
+endif
+if !hasmapto('<Plug>MarkSearchAnyNext', 'n')
+	nmap <unique> <silent> <leader>/ <Plug>MarkSearchAnyNext
+endif
+if !hasmapto('<Plug>MarkSearchAnyPrev', 'n')
+	nmap <unique> <silent> <leader>? <Plug>MarkSearchAnyPrev
+endif
+if !hasmapto('<Plug>MarkSearchNext', 'n')
+	nmap <unique> <silent> * <Plug>MarkSearchNext
+endif
+if !hasmapto('<Plug>MarkSearchPrev', 'n')
+	nmap <unique> <silent> # <Plug>MarkSearchPrev
+endif
 
 command! -nargs=? Mark call s:DoMark(<f-args>)
 
-autocmd! BufWinEnter * call s:UpdateMark()
+autocmd BufWinEnter * call s:UpdateMark()
+
+" Script variables
+let s:current_mark_position = ''
 
 " Functions
-
 function! s:MarkCurrentWord()
 	let w = s:PrevWord()
 	if w != ""
@@ -237,9 +265,7 @@ endfunction
 
 " mark or unmark a regular expression
 function! s:DoMark(...) " DoMark(regexp)
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
+	let lastwinnr = winnr()
 	" clear all marks if regexp is null
 	let regexp = ""
 	if a:0 > 0
@@ -250,7 +276,6 @@ function! s:DoMark(...) " DoMark(regexp)
 		while i <= g:mwCycleMax
 			if g:mwWord{i} != ""
 				let g:mwWord{i} = ""
-				let lastwinnr = winnr()
 				exe "windo syntax clear MarkWord" . i
 				exe lastwinnr . "wincmd w"
 			endif
@@ -268,7 +293,6 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ""
 			endif
 			let g:mwWord{i} = ""
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			exe lastwinnr . "wincmd w"
 			return 0
@@ -298,6 +322,9 @@ function! s:DoMark(...) " DoMark(regexp)
 		return -1
 	endif
 
+	" Make the match according to the 'ignorecase' setting, like the star command. 
+	exe "windo syntax case " . (&ignorecase ? 'ignore' : 'match')
+
 	" choose an unused mark group
 	let i = 1
 	while i <= g:mwCycleMax
@@ -308,7 +335,6 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -332,7 +358,6 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -346,8 +371,8 @@ endfunction
 
 " update mark colors
 function! s:UpdateMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
+	" Make the match according to the 'ignorecase' setting, like the star command. 
+	exe "syntax case " . (&ignorecase ? 'ignore' : 'match')
 
 	let i = 1
 	while i <= g:mwCycleMax
@@ -377,9 +402,6 @@ endfunction
 
 " return the mark string under the cursor. multi-lines marks not supported
 function! s:CurrentMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
 	let line = getline(".")
 	let i = 1
 	while i <= g:mwCycleMax
@@ -427,9 +449,6 @@ endfunction
 
 " combine all marks into one regexp
 function! s:AnyMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
 	let w = ""
 	let i = 1
 	while i <= g:mwCycleMax
@@ -479,11 +498,16 @@ function! s:SearchNext(...) " SearchNext(flags)
 		else
 			call s:SearchAnyMark(flags)
 		endif
+		normal! zv
 		return 1
 	else
 		return 0
 	endif
 endfunction
+
+
+" Define global variables once
+call s:InitMarkVariables()
 
 " Restore previous 'cpo' value
 let &cpo = s:save_cpo
