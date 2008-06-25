@@ -265,9 +265,7 @@ endfunction
 
 " mark or unmark a regular expression
 function! s:DoMark(...) " DoMark(regexp)
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
+	let lastwinnr = winnr()
 	" clear all marks if regexp is null
 	let regexp = ""
 	if a:0 > 0
@@ -278,7 +276,6 @@ function! s:DoMark(...) " DoMark(regexp)
 		while i <= g:mwCycleMax
 			if g:mwWord{i} != ""
 				let g:mwWord{i} = ""
-				let lastwinnr = winnr()
 				exe "windo syntax clear MarkWord" . i
 				exe lastwinnr . "wincmd w"
 			endif
@@ -296,7 +293,6 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ""
 			endif
 			let g:mwWord{i} = ""
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			exe lastwinnr . "wincmd w"
 			return 0
@@ -339,7 +335,6 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -363,7 +358,6 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 1
 			endif
-			let lastwinnr = winnr()
 			exe "windo syntax clear MarkWord" . i
 			" suggested by Marc Weber
 			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
@@ -377,11 +371,8 @@ endfunction
 
 " update mark colors
 function! s:UpdateMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
 	" Make the match according to the 'ignorecase' setting, like the star command. 
-	exe "windo syntax case " . (&ignorecase ? 'ignore' : 'match')
+	exe "syntax case " . (&ignorecase ? 'ignore' : 'match')
 
 	let i = 1
 	while i <= g:mwCycleMax
@@ -411,9 +402,6 @@ endfunction
 
 " return the mark string under the cursor. multi-lines marks not supported
 function! s:CurrentMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
 	let line = getline(".")
 	let i = 1
 	while i <= g:mwCycleMax
@@ -443,7 +431,7 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	let w = s:CurrentMark()
 	if w != ""
 		let p = s:current_mark_position
-		call search(w, flags)
+		call s:Search(w, flags)
 		call s:CurrentMark()
 		if p == s:current_mark_position
 			call search(w, flags)
@@ -451,7 +439,7 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 		let g:mwLastSearched = w
 	else
 		if g:mwLastSearched != ""
-			call search(g:mwLastSearched, flags)
+			call s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
 		else
 			call s:SearchAnyMark(flags)
 			let g:mwLastSearched = s:CurrentMark()
@@ -459,11 +447,29 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	endif
 endfunction
 
+" wrapper around search() with additonal search and error messages and "wrapscan" warning
+function! s:Search( pattern, flags, ... )
+	let l:isForwardSearch = (stridx(a:flags, 'b') == -1)
+	let l:status = (l:isForwardSearch ? "/" : "?") .  a:pattern
+	let l:severity = "NONE"
+	if ! search(a:pattern, 'W' . a:flags)
+		let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
+		let l:severity = "WarningMsg"
+		if ! search(a:pattern, a:flags) 
+			let l:status = (a:0 > 0 ? a:1 : "")
+			let l:severity = "Error"
+		endif
+	endif
+	if ! empty(l:status)
+		execute "echohl " . l:severity
+		" Limit length to avoid "Hit ENTER" prompt. 
+		echo strpart(l:status, 0, (&columns / 2)) . (len(l:status) > (&columns / 2) ? "..." : "")
+		echohl NONE
+	endif
+endfunction
+
 " combine all marks into one regexp
 function! s:AnyMark()
-	" define variables if they don't exist
-	call s:InitMarkVariables()
-
 	let w = ""
 	let i = 1
 	while i <= g:mwCycleMax
@@ -492,7 +498,7 @@ function! s:SearchAnyMark(...) " SearchAnyMark(flags)
 		let p = ""
 	endif
 	let w = s:AnyMark()
-	call search(w, flags)
+	call s:Search(w, flags)
 	call s:CurrentMark()
 	if p == s:current_mark_position
 		call search(w, flags)
@@ -519,6 +525,10 @@ function! s:SearchNext(...) " SearchNext(flags)
 		return 0
 	endif
 endfunction
+
+
+" Define global variables once
+call s:InitMarkVariables()
 
 " Restore previous 'cpo' value
 let &cpo = s:save_cpo
