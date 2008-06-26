@@ -141,8 +141,6 @@ nnoremap <silent> <Plug>MarkSearchAnyNext     :call <sid>SearchAnyMark()<cr>
 nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <sid>SearchAnyMark("b")<cr>
 nnoremap <silent> <Plug>MarkSearchNext        :if !<sid>SearchNext()<bar>execute "norm! *zv"<bar>endif<cr>
 nnoremap <silent> <Plug>MarkSearchPrev        :if !<sid>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<cr>
-nnoremap <silent> <Plug>MarkGotoNext          :if !<sid>SearchNext()<bar>execute "norm! nzv"<bar>endif<cr>
-nnoremap <silent> <Plug>MarkGotoPrev          :if !<sid>SearchNext("b")<bar>execute "norm! Nzv"<bar>endif<cr>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'. 
 
