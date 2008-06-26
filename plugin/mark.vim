@@ -141,6 +141,8 @@ nnoremap <silent> <Plug>MarkSearchAnyNext     :call <sid>SearchAnyMark()<cr>
 nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <sid>SearchAnyMark("b")<cr>
 nnoremap <silent> <Plug>MarkSearchNext        :if !<sid>SearchNext()<bar>execute "norm! *zv"<bar>endif<cr>
 nnoremap <silent> <Plug>MarkSearchPrev        :if !<sid>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkGotoNext          :if !<sid>SearchNext()<bar>execute "norm! nzv"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkGotoPrev          :if !<sid>SearchNext("b")<bar>execute "norm! Nzv"<bar>endif<cr>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'. 
 
@@ -423,29 +425,25 @@ endfunction
 " search current mark
 function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	let flags = ""
-	let l:isFound = 0
 	if a:0 > 0
 		let flags = a:1
 	endif
 	let w = s:CurrentMark()
 	if w != ""
 		let p = s:current_mark_position
-		let l:isFound = s:Search(w, flags)
+		call s:Search(w, flags)
 		call s:CurrentMark()
 		if p == s:current_mark_position
-			let l:isFound = search(w, flags)
+			call search(w, flags)
 		endif
 		let g:mwLastSearched = w
 	else
 		if g:mwLastSearched != ""
-			let l:isFound = s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
+			call s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
 		else
 			call s:SearchAnyMark(flags)
 			let g:mwLastSearched = s:CurrentMark()
 		endif
-	endif
-	if l:isFound
-		normal! zv
 	endif
 endfunction
 
@@ -454,17 +452,10 @@ function! s:Search( pattern, flags, ... )
 	let l:isForwardSearch = (stridx(a:flags, 'b') == -1)
 	let l:status = (l:isForwardSearch ? "/" : "?") .  a:pattern
 	let l:severity = "NONE"
-	let l:isFound = 0
-	if &wrapscan
-		let l:isFound = search(a:pattern, 'W' . a:flags)
-		if ! l:isFound
-			let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
-			let l:severity = "WarningMsg"
-		endif
-	endif
-	if ! l:isFound
-		let l:isFound = search(a:pattern, a:flags) 
-		if ! l:isFound
+	if ! search(a:pattern, 'W' . a:flags)
+		let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
+		let l:severity = "WarningMsg"
+		if ! search(a:pattern, a:flags) 
 			let l:status = (a:0 > 0 ? a:1 : "")
 			let l:severity = "Error"
 		endif
@@ -475,7 +466,6 @@ function! s:Search( pattern, flags, ... )
 		echo strpart(l:status, 0, (&columns / 2)) . (len(l:status) > (&columns / 2) ? "..." : "")
 		echohl NONE
 	endif
-	return l:isFound
 endfunction
 
 " combine all marks into one regexp
@@ -508,15 +498,12 @@ function! s:SearchAnyMark(...) " SearchAnyMark(flags)
 		let p = ""
 	endif
 	let w = s:AnyMark()
-	let l:isFound =  s:Search(w, flags)
+	call s:Search(w, flags)
 	call s:CurrentMark()
 	if p == s:current_mark_position
-		let l:isFound =  search(w, flags)
+		call search(w, flags)
 	endif
 	let g:mwLastSearched = ""
-	if l:isFound
-		normal! zv
-	endif
 endfunction
 
 " search last searched mark
@@ -532,6 +519,7 @@ function! s:SearchNext(...) " SearchNext(flags)
 		else
 			call s:SearchAnyMark(flags)
 		endif
+		normal! zv
 		return 1
 	else
 		return 0
