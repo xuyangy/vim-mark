@@ -423,25 +423,29 @@ endfunction
 " search current mark
 function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	let flags = ""
+	let l:isFound = 0
 	if a:0 > 0
 		let flags = a:1
 	endif
 	let w = s:CurrentMark()
 	if w != ""
 		let p = s:current_mark_position
-		call s:Search(w, flags)
+		let l:isFound = s:Search(w, flags, "Pattern not found: " . g:mwLastSearched)
 		call s:CurrentMark()
 		if p == s:current_mark_position
-			call search(w, flags)
+			let l:isFound = search(w, flags)
 		endif
 		let g:mwLastSearched = w
 	else
 		if g:mwLastSearched != ""
-			call s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
+			let l:isFound = s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
 		else
 			call s:SearchAnyMark(flags)
 			let g:mwLastSearched = s:CurrentMark()
 		endif
+	endif
+	if l:isFound
+		normal! zv
 	endif
 endfunction
 
@@ -450,10 +454,17 @@ function! s:Search( pattern, flags, ... )
 	let l:isForwardSearch = (stridx(a:flags, 'b') == -1)
 	let l:status = (l:isForwardSearch ? "/" : "?") .  a:pattern
 	let l:severity = "NONE"
-	if ! search(a:pattern, 'W' . a:flags)
-		let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
-		let l:severity = "WarningMsg"
-		if ! search(a:pattern, a:flags) 
+	let l:isFound = 0
+	if &wrapscan
+		let l:isFound = search(a:pattern, 'W' . a:flags)
+		if ! l:isFound
+			let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
+			let l:severity = "WarningMsg"
+		endif
+	endif
+	if ! l:isFound
+		let l:isFound = search(a:pattern, a:flags) 
+		if ! l:isFound
 			let l:status = (a:0 > 0 ? a:1 : "")
 			let l:severity = "Error"
 		endif
@@ -464,6 +475,7 @@ function! s:Search( pattern, flags, ... )
 		echo strpart(l:status, 0, (&columns / 2)) . (len(l:status) > (&columns / 2) ? "..." : "")
 		echohl NONE
 	endif
+	return l:isFound
 endfunction
 
 " combine all marks into one regexp
@@ -496,12 +508,15 @@ function! s:SearchAnyMark(...) " SearchAnyMark(flags)
 		let p = ""
 	endif
 	let w = s:AnyMark()
-	call s:Search(w, flags)
+	let l:isFound =  s:Search(w, flags, "Pattern not found: " . w)
 	call s:CurrentMark()
 	if p == s:current_mark_position
-		call search(w, flags)
+		let l:isFound =  search(w, flags)
 	endif
 	let g:mwLastSearched = ""
+	if l:isFound
+		normal! zv
+	endif
 endfunction
 
 " search last searched mark
@@ -517,7 +532,6 @@ function! s:SearchNext(...) " SearchNext(flags)
 		else
 			call s:SearchAnyMark(flags)
 		endif
-		normal! zv
 		return 1
 	else
 		return 0
