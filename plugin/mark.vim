@@ -38,10 +38,10 @@
 " Bugs:        some colored words could not be highlighted
 "
 " TODO:
-"  b) Why do you use the algorithm in s:PrevWord instead of simply using
+"  -) Why do you use the algorithm in s:PrevWord instead of simply using
 "			<cword>, which would make mark.vim work like the * command? IMHO, having
 "			the same behavior like '*' would be less surprising.
-"  c) With Vim 7.2, you could use matchadd() / matchdelete() instead of the
+"  -) With Vim 7.2, you could use matchadd() / matchdelete() instead of the
 "			':syntax match' commands. 
 " 
 " Changes:
@@ -49,8 +49,8 @@
 "  1. Refactored s:Search() to optionally take advantage of SearchSpecial.vim
 "     autoload functionality for echoing of search pattern, wrap and error
 "     messages. 
-"  2. Now prepending search type ("any-mark", "same-mark") for better
-"     identification. 
+"  2. Now prepending search type ("any-mark", "same-mark", "new-mark") for
+"			better identification. 
 "
 " 1st Sep 2008, Ingo Karkat: bugfixes and enhancements
 "  1. Added <Plug>MarkAllClear (without a default mapping), which clears all
@@ -465,7 +465,7 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	let w = s:CurrentMark()
 	if w != ""
 		let p = s:current_mark_position
-		let l:isFound = s:Search(w, flags, 'same-mark')
+		let l:isFound = s:Search(w, flags, (w ==# g:mwLastSearched ? 'same-mark' : 'new-mark'))
 		call s:CurrentMark()
 		if p == s:current_mark_position
 			let l:isFound = search(w, flags)
