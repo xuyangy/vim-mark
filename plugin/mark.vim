@@ -1,6 +1,6 @@
 " Script Name: mark.vim
-" Version:     1.6.1 (global version)
-" Last Change: May 31, 2009
+" Version:     1.5.0 (global version)
+" Last Change: September 1, 2009
 " Author:      Yuheng Xie <elephant@linux.net.cn>
 " Contributors:Luc Hermitte, Ingo Karkat
 "
@@ -38,23 +38,13 @@
 " Bugs:        some colored words could not be highlighted
 "
 " TODO:
-"  -) With Vim 7.2, you could use matchadd() / matchdelete() instead of the
+"  b) Why do you use the algorithm in s:PrevWord instead of simply using
+"			<cword>, which would make mark.vim work like the * command? IMHO, having
+"			the same behavior like '*' would be less surprising.
+"  c) With Vim 7.2, you could use matchadd() / matchdelete() instead of the
 "			':syntax match' commands. 
 " 
 " Changes:
-" 31st May 2009, Ingo Karkat
-"  1. Refactored s:Search() to optionally take advantage of SearchSpecial.vim
-"     autoload functionality for echoing of search pattern, wrap and error
-"     messages. 
-"  2. Now prepending search type ("any-mark", "same-mark", "new-mark") for
-"			better identification. 
-"  3. Retired the algorithm in s:PrevWord in favor of simply using <cword>,
-"			which makes mark.vim work like the * command. At the end of a line,
-"			non-keyword characters may now be marked; the previous algorithm prefered
-"			any preceding word. 
-"	 4. BF: If 'iskeyword' contains characters that have a special meaning in a
-"	 	  regex (e.g. [.*]), these are now escaped properly. 
-"
 " 1st Sep 2008, Ingo Karkat: bugfixes and enhancements
 "  1. Added <Plug>MarkAllClear (without a default mapping), which clears all
 "			marks, even when the cursor is on a mark.
@@ -210,20 +200,10 @@ autocmd BufWinEnter * call s:UpdateMark()
 let s:current_mark_position = ''
 
 " Functions
-
-function! s:EscapeText( text )
-	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
-endfunction
-" Return a search pattern for the current word, like the built-in star command. 
 function! s:MarkCurrentWord()
-	let l:cword = expand("<cword>")
-
-	" The star command only creates a \<whole word\> search pattern if the
-	" <cword> actually only consists of keyword characters. 
-	if l:cword =~# '^\k\+$'
-		call s:DoMark('\<' . s:EscapeText(l:cword) . '\>')
-	elseif l:cword != ''
-		call s:DoMark(s:EscapeText(l:cword))
+	let w = s:PrevWord()
+	if w != ""
+		call s:DoMark('\<' . w . '\>')
 	endif
 endfunction
 
@@ -296,6 +276,16 @@ function! s:InitMarkVariables()
 	endwhile
 	if !exists("g:mwLastSearched")
 		let g:mwLastSearched = ""
+	endif
+endfunction
+
+" return the word under or before the cursor
+function! s:PrevWord()
+	let line = getline(".")
+	if line[col(".") - 1] =~ '\w'
+		return expand("<cword>")
+	else
+		return substitute(strpart(line, 0, col(".") - 1), '^.\{-}\(\w\+\)\W*$', '\1', '')
 	endif
 endfunction
 
@@ -468,7 +458,7 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	let w = s:CurrentMark()
 	if w != ""
 		let p = s:current_mark_position
-		let l:isFound = s:Search(w, flags, (w ==# g:mwLastSearched ? 'same-mark' : 'new-mark'))
+		let l:isFound = s:Search(w, flags, "Pattern not found: " . g:mwLastSearched)
 		call s:CurrentMark()
 		if p == s:current_mark_position
 			let l:isFound = search(w, flags)
@@ -476,7 +466,7 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 		let g:mwLastSearched = w
 	else
 		if g:mwLastSearched != ""
-			let l:isFound = s:Search(g:mwLastSearched, flags, 'same-mark')
+			let l:isFound = s:Search(g:mwLastSearched, flags, "Pattern not found: " . g:mwLastSearched)
 		else
 			call s:SearchAnyMark(flags)
 			let g:mwLastSearched = s:CurrentMark()
@@ -487,63 +477,31 @@ function! s:SearchCurrentMark(...) " SearchCurrentMark(flags)
 	endif
 endfunction
 
-silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.  
-if exists('*SearchSpecial#WrapMessage')
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-	function! s:ErrorMessage( searchType, searchPattern )
-		call SearchSpecial#ErrorMessage(a:searchPattern, a:searchType . ' not found')
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-else
-	function! s:Trim( message )
-		" Limit length to avoid "Hit ENTER" prompt. 
-		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
-	endfunction
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		let v:warningmsg = a:searchType . ' search hit ' . (a:isBackward ? 'TOP' : 'BOTTOM') . ', continuing at ' . (a:isBackward ? 'BOTTOM' : 'TOP')
-		echohl WarningMsg
-		echo s:Trim(v:warningmsg)
-		echohl None
-	endfunction
-	function! s:ErrorMessage( searchType, searchPattern )
-		let v:errmsg = a:searchType . ' not found: ' . a:searchPattern
-		echohl ErrorMsg
-		echomsg v:errmsg
-		echohl None
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
-		echohl SearchSpecialSearchType
-		echo a:searchType
-		echohl None
-		echon s:Trim(l:message)
-	endfunction
-endif
-
 " wrapper around search() with additonal search and error messages and "wrapscan" warning
-function! s:Search( pattern, flags, searchType)
-	let l:isBackward = (stridx(a:flags, 'b') != -1)
+function! s:Search( pattern, flags, ... )
+	let l:isForwardSearch = (stridx(a:flags, 'b') == -1)
+	let l:status = (l:isForwardSearch ? "/" : "?") .  a:pattern
+	let l:severity = "NONE"
 	let l:isFound = 0
-	let l:isWrap = 0
 	if &wrapscan
 		let l:isFound = search(a:pattern, 'W' . a:flags)
 		if ! l:isFound
-			let l:isWrap = 1
+			let l:status = "search hit " . (l:isForwardSearch ? "BOTTOM" : "TOP") . ", continuing at " . (l:isForwardSearch ? "TOP" : "BOTTOM")
+			let l:severity = "WarningMsg"
 		endif
 	endif
 	if ! l:isFound
 		let l:isFound = search(a:pattern, a:flags) 
+		if ! l:isFound
+			let l:status = (a:0 > 0 ? a:1 : "")
+			let l:severity = "ErrorMsg"
+		endif
 	endif
-	if ! l:isFound
-		call s:ErrorMessage(a:searchType, a:pattern)
-	elseif l:isWrap
-		call s:WrapMessage(a:searchType, a:pattern, l:isBackward)
-	else
-		call s:EchoSearchPattern(a:searchType, a:pattern, l:isBackward)
+	if ! empty(l:status)
+		execute "echohl " . l:severity
+		" Limit length to avoid "Hit ENTER" prompt. 
+		echo strpart(l:status, 0, (&columns / 2)) . (len(l:status) > (&columns / 2) ? "..." : "")
+		echohl None
 	endif
 	return l:isFound
 endfunction
@@ -578,7 +536,7 @@ function! s:SearchAnyMark(...) " SearchAnyMark(flags)
 		let p = ""
 	endif
 	let w = s:AnyMark()
-	let l:isFound =  s:Search(w, flags, 'any-mark')
+	let l:isFound =  s:Search(w, flags, "Pattern not found: " . w)
 	call s:CurrentMark()
 	if p == s:current_mark_position
 		let l:isFound =  search(w, flags)
