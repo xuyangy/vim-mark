@@ -51,10 +51,6 @@
 "  2. Added missing setter for re-inclusion guard. 
 "  3. Factored :syntax operations out of s:DoMark() and s:UpdateMark() so that
 "			they can all be done in a single :windo. 
-"	 4. Normal mode <Plug>MarkSet now has the same semantics as its visual mode
-"			cousin: If the cursor is on an existing mark, the mark is removed.
-"			Beforehand, one could only remove a visually selected mark via again
-"			selecting it. Now, one simply can invoke the mapping when on such a mark. 
 "
 " 31st May 2009, Ingo Karkat
 "  1. Refactored s:Search() to optionally take advantage of SearchSpecial.vim
@@ -229,24 +225,16 @@ let s:current_mark_position = ''
 function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
-" Mark the current word, like the built-in star command. 
-" If the cursor is on an existing mark, remove it. 
+" Return a search pattern for the current word, like the built-in star command. 
 function! s:MarkCurrentWord()
-	let l:regexp = s:CurrentMark()
-	if empty(l:regexp)
-		let l:cword = expand("<cword>")
+	let l:cword = expand("<cword>")
 
-		" The star command only creates a \<whole word\> search pattern if the
-		" <cword> actually only consists of keyword characters. 
-		if l:cword =~# '^\k\+$'
-			let l:regexp = '\<' . s:EscapeText(l:cword) . '\>'
-		elseif l:cword != ''
-			let l:regexp = s:EscapeText(l:cword)
-		endif
-	endif
-
-	if ! empty(l:regexp)
-		call s:DoMark(l:regexp)
+	" The star command only creates a \<whole word\> search pattern if the
+	" <cword> actually only consists of keyword characters. 
+	if l:cword =~# '^\k\+$'
+		call s:DoMark('\<' . s:EscapeText(l:cword) . '\>')
+	elseif l:cword != ''
+		call s:DoMark(s:EscapeText(l:cword))
 	endif
 endfunction
 
@@ -349,7 +337,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			let i += 1
 		endwhile
 		let g:mwLastSearched = ""
-		noautocmd windo call s:ClearMatches(l:indices)
+		windo call s:ClearMatches(l:indices)
 		exe lastwinnr . "wincmd w"
 		return
 	endif
@@ -362,7 +350,7 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ''
 			endif
 			let g:mwWord[i] = ''
-			noautocmd windo call s:MarkMatch(i, '')
+			windo call s:MarkMatch(i, '')
 			exe lastwinnr . "wincmd w"
 			return
 		endif
@@ -401,7 +389,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 0
 			endif
-			noautocmd windo call s:MarkMatch(i, quoted_regexp)
+			windo call s:MarkMatch(i, quoted_regexp)
 			exe lastwinnr . "wincmd w"
 			return
 		endif
@@ -421,7 +409,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			else
 				let g:mwCycle = 0
 			endif
-			noautocmd windo call s:MarkMatch(i, quoted_regexp)
+			windo call s:MarkMatch(i, quoted_regexp)
 			exe lastwinnr . "wincmd w"
 			return
 		endif
