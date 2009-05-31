@@ -1,10 +1,9 @@
 " Script Name: mark.vim
-" Version:     2.0.0 (global version)
-" Last Change: June 1, 2009
+" Version:     1.6.1 (global version)
+" Last Change: May 31, 2009
 " Author:      Yuheng Xie <elephant@linux.net.cn>
 " Contributors:Luc Hermitte, Ingo Karkat
 " Dependencies:
-"  - Vim 7.0 or higher. 
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
 " Description: a little script to highlight several words in different colors
@@ -45,19 +44,6 @@
 "			':syntax match' commands. 
 " 
 " Changes:
-" 1st Jun 2009, Ingo Karkat
-"  1.	Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
-"			zero-based, but the syntax groups "MarkWordx" are still one-based. 
-"  2. Added missing setter for re-inclusion guard. 
-"  3. Factored :syntax operations out of s:DoMark() and s:UpdateMark() so that
-"			they can all be done in a single :windo. 
-"	 4. Normal mode <Plug>MarkSet now has the same semantics as its visual mode
-"			cousin: If the cursor is on an existing mark, the mark is removed.
-"			Beforehand, one could only remove a visually selected mark via again
-"			selecting it. Now, one simply can invoke the mapping when on such a mark. 
-"	 5. Highlighting can now actually be overridden in the vimrc (anywhere
-"			_before_ sourcing this script) by using ':hi def'. 
-"
 " 31st May 2009, Ingo Karkat
 "  1. Refactored s:Search() to optionally take advantage of SearchSpecial.vim
 "     autoload functionality for echoing of search pattern, wrap and error
@@ -119,20 +105,19 @@
 " (*) command :Mark
 "     -> e.g. :Mark Mark.\{-}\ze(
 
+" default colors/groups
+" you may define your own colors in you vimrc file, in the form as below:
+hi MarkWord1  ctermbg=Cyan     ctermfg=Black  guibg=#8CCBEA    guifg=Black
+hi MarkWord2  ctermbg=Green    ctermfg=Black  guibg=#A4E57E    guifg=Black
+hi MarkWord3  ctermbg=Yellow   ctermfg=Black  guibg=#FFDB72    guifg=Black
+hi MarkWord4  ctermbg=Red      ctermfg=Black  guibg=#FF7272    guifg=Black
+hi MarkWord5  ctermbg=Magenta  ctermfg=Black  guibg=#FFB3FF    guifg=Black
+hi MarkWord6  ctermbg=Blue     ctermfg=Black  guibg=#9999FF    guifg=Black
+
 " Anti reinclusion guards
-if (exists('g:loaded_mark') && !exists('g:force_reload_mark')) || (v:version < 700)
+if exists('g:loaded_mark') && !exists('g:force_reload_mark')
 	finish
 endif
-let g:loaded_mark = 1
-
-" default colors/groups
-" you may define your own colors in your vimrc file, in the form as below:
-hi def MarkWord1  ctermbg=Cyan     ctermfg=Black  guibg=#8CCBEA    guifg=Black
-hi def MarkWord2  ctermbg=Green    ctermfg=Black  guibg=#A4E57E    guifg=Black
-hi def MarkWord3  ctermbg=Yellow   ctermfg=Black  guibg=#FFDB72    guifg=Black
-hi def MarkWord4  ctermbg=Red      ctermfg=Black  guibg=#FF7272    guifg=Black
-hi def MarkWord5  ctermbg=Magenta  ctermfg=Black  guibg=#FFB3FF    guifg=Black
-hi def MarkWord6  ctermbg=Blue     ctermfg=Black  guibg=#9999FF    guifg=Black
 
 " Support for |line-continuation|
 let s:save_cpo = &cpo
@@ -221,11 +206,7 @@ endif
 
 command! -nargs=? Mark call s:DoMark(<f-args>)
 
-augroup Mark
-	autocmd!
-	autocmd VimEnter * if ! exists('w:mwMatch') | call s:UpdateMark() | endif
-	autocmd WinEnter * if ! exists('w:mwMatch') | call s:UpdateMark() | endif
-augroup END
+autocmd BufWinEnter * call s:UpdateMark()
 
 " Script variables
 let s:current_mark_position = ''
@@ -235,24 +216,16 @@ let s:current_mark_position = ''
 function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
-" Mark the current word, like the built-in star command. 
-" If the cursor is on an existing mark, remove it. 
+" Return a search pattern for the current word, like the built-in star command. 
 function! s:MarkCurrentWord()
-	let l:regexp = s:CurrentMark()
-	if empty(l:regexp)
-		let l:cword = expand("<cword>")
+	let l:cword = expand("<cword>")
 
-		" The star command only creates a \<whole word\> search pattern if the
-		" <cword> actually only consists of keyword characters. 
-		if l:cword =~# '^\k\+$'
-			let l:regexp = '\<' . s:EscapeText(l:cword) . '\>'
-		elseif l:cword != ''
-			let l:regexp = s:EscapeText(l:cword)
-		endif
-	endif
-
-	if ! empty(l:regexp)
-		call s:DoMark(l:regexp)
+	" The star command only creates a \<whole word\> search pattern if the
+	" <cword> actually only consists of keyword characters. 
+	if l:cword =~# '^\k\+$'
+		call s:DoMark('\<' . s:EscapeText(l:cword) . '\>')
+	elseif l:cword != ''
+		call s:DoMark(s:EscapeText(l:cword))
 	endif
 endfunction
 
@@ -314,34 +287,17 @@ function! s:InitMarkVariables()
 		let g:mwCycleMax = i - 1
 	endif
 	if !exists("g:mwCycle")
-		let g:mwCycle = 0
+		let g:mwCycle = 1
 	endif
-	if !exists("g:mwWord")
-		let g:mwWord = repeat([''], g:mwCycleMax)
-	endif
+	let i = 1
+	while i <= g:mwCycleMax
+		if !exists("g:mwWord" . i)
+			let g:mwWord{i} = ""
+		endif
+		let i = i + 1
+	endwhile
 	if !exists("g:mwLastSearched")
 		let g:mwLastSearched = ""
-	endif
-endfunction
-
-function! s:ClearMatches( indices )
-	for l:index in a:indices
-		silent! call matchdelete(w:mwMatch[l:index])
-		let w:mwMatch[l:index] = 0
-	endfor
-endfunction
-function! s:MarkMatch( index, expr )
-	if w:mwMatch[a:index] > 0
-		silent! call matchdelete(w:mwMatch[a:index])
-		let w:mwMatch[a:index] = 0
-	endif
-
-	if ! empty(a:expr)
-		" Make the match according to the 'ignorecase' setting, like the star command. 
-		" (But honor an explicit case-sensitive regexp via the /\C/ atom.) 
-		let l:expr = ((&ignorecase && a:expr !~# '\\\@<!\\C') ? '\c' . a:expr : a:expr)
-
-		let w:mwMatch[a:index] = matchadd('MarkWord' . (a:index + 1), l:expr, -10)
 	endif
 endfunction
 
@@ -349,37 +305,34 @@ endfunction
 function! s:DoMark(...) " DoMark(regexp)
 	let lastwinnr = winnr()
 	let regexp = (a:0 ? a:1 : '')
-
 	" clear all marks if regexp is null
-	if empty(regexp)
-		let i = 0
-		let indices = []
-		while i < g:mwCycleMax
-			if !empty(g:mwWord[i])
-				let g:mwWord[i] = ''
-				call add(indices, i)
+	if regexp == ""
+		let i = 1
+		while i <= g:mwCycleMax
+			if g:mwWord{i} != ""
+				let g:mwWord{i} = ""
+				exe "windo syntax clear MarkWord" . i
+				exe lastwinnr . "wincmd w"
 			endif
-			let i += 1
+			let i = i + 1
 		endwhile
 		let g:mwLastSearched = ""
-		noautocmd windo call s:ClearMatches(l:indices)
-		exe lastwinnr . "wincmd w"
-		return
+		return 0
 	endif
 
 	" clear the mark if it has been marked
-	let i = 0
-	while i < g:mwCycleMax
-		if regexp == g:mwWord[i]
-			if g:mwLastSearched == g:mwWord[i]
-				let g:mwLastSearched = ''
+	let i = 1
+	while i <= g:mwCycleMax
+		if regexp == g:mwWord{i}
+			if g:mwLastSearched == g:mwWord{i}
+				let g:mwLastSearched = ""
 			endif
-			let g:mwWord[i] = ''
-			noautocmd windo call s:MarkMatch(i, '')
+			let g:mwWord{i} = ""
+			exe "windo syntax clear MarkWord" . i
 			exe lastwinnr . "wincmd w"
-			return
+			return 0
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 
 	" add to history
@@ -390,77 +343,116 @@ function! s:DoMark(...) " DoMark(regexp)
 		call histadd("@", regexp)
 	endif
 
-	" choose an unused mark group
+	" quote regexp with / etc. e.g. pattern => /pattern/
+	let quote = "/?~!@#$%^&*+-=,.:"
 	let i = 0
-	while i < g:mwCycleMax
-		if empty(g:mwWord[i])
-			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
+	while i < strlen(quote)
+		if stridx(regexp, quote[i]) < 0
+			let quoted_regexp = quote[i] . regexp . quote[i]
+			break
+		endif
+		let i = i + 1
+	endwhile
+	if i >= strlen(quote)
+		return -1
+	endif
+
+	" Make the match according to the 'ignorecase' setting, like the star command. 
+	exe "windo syntax case " . (&ignorecase ? 'ignore' : 'match')
+
+	" choose an unused mark group
+	let i = 1
+	while i <= g:mwCycleMax
+		if g:mwWord{i} == ""
+			let g:mwWord{i} = regexp
+			if i < g:mwCycleMax
 				let g:mwCycle = i + 1
 			else
-				let g:mwCycle = 0
+				let g:mwCycle = 1
 			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
+			exe "windo syntax clear MarkWord" . i
+			" suggested by Marc Weber
+			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
+			exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=.*"
 			exe lastwinnr . "wincmd w"
-			return
+			return i
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 
 	" choose a mark group by cycle
-	let i = 0
-	while i < g:mwCycleMax
+	let i = 1
+	while i <= g:mwCycleMax
 		if g:mwCycle == i
-			if g:mwLastSearched == g:mwWord[i]
-				let g:mwLastSearched = ''
+			if g:mwLastSearched == g:mwWord{i}
+				let g:mwLastSearched = ""
 			endif
-			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
+			let g:mwWord{i} = regexp
+			if i < g:mwCycleMax
 				let g:mwCycle = i + 1
 			else
-				let g:mwCycle = 0
+				let g:mwCycle = 1
 			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
+			exe "windo syntax clear MarkWord" . i
+			" suggested by Marc Weber
+			" exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
+			exe "windo syntax match MarkWord" . i . " " . quoted_regexp . " containedin=.*"
 			exe lastwinnr . "wincmd w"
-			return
+			return i
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 endfunction
 
-" initialize mark colors in a new buffer
+" update mark colors
 function! s:UpdateMark()
-	let w:mwMatch = repeat([0], g:mwCycleMax)
+	" Make the match according to the 'ignorecase' setting, like the star command. 
+	exe "syntax case " . (&ignorecase ? 'ignore' : 'match')
 
-	let i = 0
-	while i < g:mwCycleMax
-		if empty(g:mwWord[i])
-			call s:ClearMatches([i])
-		else
-			call s:MarkMatch(i, g:mwWord[i])
+	let i = 1
+	while i <= g:mwCycleMax
+		exe "syntax clear MarkWord" . i
+		if g:mwWord{i} != ""
+			" quote regexp with / etc. e.g. pattern => /pattern/
+			let quote = "/?~!@#$%^&*+-=,.:"
+			let j = 0
+			while j < strlen(quote)
+				if stridx(g:mwWord{i}, quote[j]) < 0
+					let quoted_regexp = quote[j] . g:mwWord{i} . quote[j]
+					break
+				endif
+				let j = j + 1
+			endwhile
+			if j >= strlen(quote)
+				continue
+			endif
+
+			" suggested by Marc Weber
+			" exe "syntax match MarkWord" . i . " " . quoted_regexp . " containedin=ALL"
+			exe "syntax match MarkWord" . i . " " . quoted_regexp . " containedin=.*"
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 endfunction
 
 " return the mark string under the cursor. multi-lines marks not supported
 function! s:CurrentMark()
 	let line = getline(".")
-	let i = 0
-	while i < g:mwCycleMax
-		if !empty(g:mwWord[i])
+	let i = 1
+	while i <= g:mwCycleMax
+		if g:mwWord{i} != ""
 			let start = 0
 			while start >= 0 && start < strlen(line) && start < col(".")
-				let b = match(line, g:mwWord[i], start)
-				let e = matchend(line, g:mwWord[i], start)
+				let b = match(line, g:mwWord{i}, start)
+				let e = matchend(line, g:mwWord{i}, start)
 				if b < col(".") && col(".") <= e
 					let s:current_mark_position = line(".") . "_" . b
-					return g:mwWord[i]
+					return g:mwWord{i}
 				endif
 				let start = e
 			endwhile
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 	return ""
 endfunction
@@ -558,16 +550,16 @@ endfunction
 " combine all marks into one regexp
 function! s:AnyMark()
 	let w = ""
-	let i = 0
-	while i < g:mwCycleMax
-		if !empty(g:mwWord[i])
+	let i = 1
+	while i <= g:mwCycleMax
+		if g:mwWord{i} != ""
 			if w != ""
-				let w = w . '\|' . g:mwWord[i]
+				let w = w . '\|' . g:mwWord{i}
 			else
-				let w = g:mwWord[i]
+				let w = g:mwWord{i}
 			endif
 		endif
-		let i += 1
+		let i = i + 1
 	endwhile
 	return w
 endfunction
