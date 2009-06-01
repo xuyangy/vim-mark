@@ -330,13 +330,6 @@ function! s:InitMarkVariables()
 	endif
 endfunction
 
-function! s:Cycle( ... )
-	let l:currentCycle = g:mwCycle
-	let l:newCycle = (a:0 ? a:1 : g:mwCycle) + 1
-	let g:mwCycle = (l:newCycle < g:mwCycleMax ? l:newCycle : 0)
-	return l:currentCycle
-endfunction
-
 function! s:ClearMatches( indices )
 	for l:index in a:indices
 		silent! call matchdelete(w:mwMatch[l:index])
@@ -408,7 +401,11 @@ function! s:DoMark(...) " DoMark(regexp)
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
 			let g:mwWord[i] = regexp
-			call s:Cycle(i)
+			if (i + 1) < g:mwCycleMax
+				let g:mwCycle = i + 1
+			else
+				let g:mwCycle = 0
+			endif
 			noautocmd windo call s:MarkMatch(i, regexp)
 			exe lastwinnr . "wincmd w"
 			return
@@ -417,20 +414,29 @@ function! s:DoMark(...) " DoMark(regexp)
 	endwhile
 
 	" choose a mark group by cycle
-	let i = s:Cycle()
-	if g:mwLastSearched == g:mwWord[i]
-		let g:mwLastSearched = ''
-	endif
-	let g:mwWord[i] = regexp
-	noautocmd windo call s:MarkMatch(i, regexp)
-	exe lastwinnr . "wincmd w"
+	let i = 0
+	while i < g:mwCycleMax
+		if g:mwCycle == i
+			if g:mwLastSearched == g:mwWord[i]
+				let g:mwLastSearched = ''
+			endif
+			let g:mwWord[i] = regexp
+			if (i + 1) < g:mwCycleMax
+				let g:mwCycle = i + 1
+			else
+				let g:mwCycle = 0
+			endif
+			noautocmd windo call s:MarkMatch(i, regexp)
+			exe lastwinnr . "wincmd w"
+			return
+		endif
+		let i += 1
+	endwhile
 endfunction
 
-" initialize mark colors in a (new) window
+" initialize mark colors in a new buffer
 function! s:UpdateMark()
-	if ! exists('w:mwMatch')
-		let w:mwMatch = repeat([0], g:mwCycleMax)
-	endif
+	let w:mwMatch = repeat([0], g:mwCycleMax)
 
 	let i = 0
 	while i < g:mwCycleMax
