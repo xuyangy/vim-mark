@@ -41,63 +41,65 @@
 " Bugs:
 "
 " TODO:
-"   - Use winrestview() to fix effects of :windo. 
-"   - Handle tabs. 
 " 
 " Changes:
 " 2nd Jun 2009, Ingo Karkat
-"  1.	Replaced highlighting via :syntax with matchadd() / matchdelete(). This
-"			requires Vim 7.2 / 7.1 with patches. This method is faster, there are no
-"			more clashes with syntax highlighting (:match always has preference), and
-"			the background highlighting does not disappear under 'cursorline'. 
-"  		
+"  1. Replaced highlighting via :syntax with matchadd() / matchdelete(). This
+"     requires Vim 7.2 / 7.1 with patches. This method is faster, there are no
+"     more clashes with syntax highlighting (:match always has preference), and
+"     the background highlighting does not disappear under 'cursorline'. 
+"  2. Factored :windo application out into s:MarkScope(). 
+"  3. Using winrestcmd() to fix effects of :windo: By entering a window, its
+"     height is potentially increased from 0 to 1. 
+"  4. Handling multiple tabs by calling s:UpdateScope() on the TabEnter event. 
+"     
 " 1st Jun 2009, Ingo Karkat
-"  1.	Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
-"			zero-based, but the syntax groups "MarkWordx" are still one-based. 
+"  1. Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
+"     zero-based, but the syntax groups "MarkWordx" are still one-based. 
 "  2. Added missing setter for re-inclusion guard. 
 "  3. Factored :syntax operations out of s:DoMark() and s:UpdateMark() so that
-"			they can all be done in a single :windo. 
-"	 4. Normal mode <Plug>MarkSet now has the same semantics as its visual mode
-"			cousin: If the cursor is on an existing mark, the mark is removed.
-"			Beforehand, one could only remove a visually selected mark via again
-"			selecting it. Now, one simply can invoke the mapping when on such a mark. 
-"	 5. Highlighting can now actually be overridden in the vimrc (anywhere
-"			_before_ sourcing this script) by using ':hi def'. 
+"     they can all be done in a single :windo. 
+"  4. Normal mode <Plug>MarkSet now has the same semantics as its visual mode
+"     cousin: If the cursor is on an existing mark, the mark is removed.
+"     Beforehand, one could only remove a visually selected mark via again
+"     selecting it. Now, one simply can invoke the mapping when on such a mark. 
+"  5. Highlighting can now actually be overridden in the vimrc (anywhere
+"     _before_ sourcing this script) by using ':hi def'. 
 "
 " 31st May 2009, Ingo Karkat
 "  1. Refactored s:Search() to optionally take advantage of SearchSpecial.vim
 "     autoload functionality for echoing of search pattern, wrap and error
 "     messages. 
 "  2. Now prepending search type ("any-mark", "same-mark", "new-mark") for
-"			better identification. 
+"     better identification. 
 "  3. Retired the algorithm in s:PrevWord in favor of simply using <cword>,
-"			which makes mark.vim work like the * command. At the end of a line,
-"			non-keyword characters may now be marked; the previous algorithm prefered
-"			any preceding word. 
-"	 4. BF: If 'iskeyword' contains characters that have a special meaning in a
-"	 	  regex (e.g. [.*]), these are now escaped properly. 
+"     which makes mark.vim work like the * command. At the end of a line,
+"     non-keyword characters may now be marked; the previous algorithm prefered
+"     any preceding word. 
+"  4. BF: If 'iskeyword' contains characters that have a special meaning in a
+"     regex (e.g. [.*]), these are now escaped properly. 
 "
 " 1st Sep 2008, Ingo Karkat: bugfixes and enhancements
 "  1. Added <Plug>MarkAllClear (without a default mapping), which clears all
-"			marks, even when the cursor is on a mark.
+"     marks, even when the cursor is on a mark.
 "  2. Added <Plug>... mappings for hard-coded \*, \#, \/, \?, * and #, to allow
-"			re-mapping and disabling. Beforehand, there were some <Plug>... mappings
-"			and hard-coded ones; now, everything can be customized.
+"     re-mapping and disabling. Beforehand, there were some <Plug>... mappings
+"     and hard-coded ones; now, everything can be customized.
 "  3. Bugfix: Using :autocmd without <bang> to avoid removing _all_ autocmds for
-"			the BufWinEnter event. (Using a custom :augroup would be even better.)
+"     the BufWinEnter event. (Using a custom :augroup would be even better.)
 "  4. Bugfix: Explicitly defining s:current_mark_position; some execution paths
-"			left it undefined, causing errors.
+"     left it undefined, causing errors.
 "  5. Refactoring: Instead of calling s:InitMarkVariables() at the beginning of
-"			several functions, just calling it once when sourcing the script.
+"     several functions, just calling it once when sourcing the script.
 "  6. Refactoring: Moved multiple 'let lastwinnr = winnr()' to a single one at the
-"			top of DoMark().
+"     top of DoMark().
 "  7. ENH: Make the match according to the 'ignorecase' setting, like the star
-"			command.
+"     command.
 "  8. The jumps to the next/prev occurrence now print 'search hit BOTTOM,
-"			continuing at TOP" and "Pattern not found:..." messages, like the * and
-"			n/N VIM search commands.
+"     continuing at TOP" and "Pattern not found:..." messages, like the * and
+"     n/N VIM search commands.
 "  9. Jumps now open folds if the occurrence is inside a closed fold, just like n/N
-"			do. 
+"     do. 
 "
 " 10th Mar 2006, Yuheng Xie: jump to ANY mark
 " (*) added \* \# \/ \? for the ability of jumping to ANY mark, even when the
@@ -225,12 +227,13 @@ if !hasmapto('<Plug>MarkSearchPrev', 'n')
 	nmap <unique> <silent> # <Plug>MarkSearchPrev
 endif
 
-command! -nargs=? Mark call s:DoMark(<f-args>)
+command! -nargs=? Mark call <SID>DoMark(<f-args>)
 
 augroup Mark
 	autocmd!
-	autocmd VimEnter * if ! exists('w:mwMatch') | call s:UpdateMark() | endif
-	autocmd WinEnter * if ! exists('w:mwMatch') | call s:UpdateMark() | endif
+	autocmd VimEnter * if ! exists('w:mwMatch') | call <SID>UpdateMark() | endif
+	autocmd WinEnter * if ! exists('w:mwMatch') | call <SID>UpdateMark() | endif
+	autocmd TabEnter * call <SID>UpdateScope()
 augroup END
 
 " Script variables
@@ -330,30 +333,58 @@ function! s:InitMarkVariables()
 	endif
 endfunction
 
-function! s:ClearMatches( indices )
-	for l:index in a:indices
-		silent! call matchdelete(w:mwMatch[l:index])
-		let w:mwMatch[l:index] = 0
-	endfor
+function! s:Cycle( ... )
+	let l:currentCycle = g:mwCycle
+	let l:newCycle = (a:0 ? a:1 : g:mwCycle) + 1
+	let g:mwCycle = (l:newCycle < g:mwCycleMax ? l:newCycle : 0)
+	return l:currentCycle
 endfunction
-function! s:MarkMatch( index, expr )
-	if w:mwMatch[a:index] > 0
-		silent! call matchdelete(w:mwMatch[a:index])
-		let w:mwMatch[a:index] = 0
-	endif
+
+" Set / clear matches in the current window. 
+function! s:MarkMatch( indices, expr )
+	for l:index in a:indices
+		if w:mwMatch[l:index] > 0
+			silent! call matchdelete(w:mwMatch[l:index])
+			let w:mwMatch[l:index] = 0
+		endif
+	endfor
 
 	if ! empty(a:expr)
 		" Make the match according to the 'ignorecase' setting, like the star command. 
 		" (But honor an explicit case-sensitive regexp via the /\C/ atom.) 
 		let l:expr = ((&ignorecase && a:expr !~# '\\\@<!\\C') ? '\c' . a:expr : a:expr)
 
-		let w:mwMatch[a:index] = matchadd('MarkWord' . (a:index + 1), l:expr, -10)
+		let w:mwMatch[a:indices[0]] = matchadd('MarkWord' . (a:indices[0] + 1), l:expr, -10)
 	endif
 endfunction
+" Set / clear matches in all windows. 
+function! s:MarkScope( indices, expr )
+	let l:currentWinNr = winnr()
 
+	" By entering a window, its height is potentially increased from 0 to 1 (the
+	" minimum for the current window). To avoid any modification, save the window
+	" sizes and restore them after visiting all windows. 
+	let l:originalWindowLayout = winrestcmd() 
+
+	noautocmd windo call s:MarkMatch(a:indices, a:expr)
+	execute l:currentWinNr . 'wincmd w'
+	silent! execute l:originalWindowLayout
+endfunction
+" Update matches in all windows. 
+function! s:UpdateScope()
+	let l:currentWinNr = winnr()
+
+	" By entering a window, its height is potentially increased from 0 to 1 (the
+	" minimum for the current window). To avoid any modification, save the window
+	" sizes and restore them after visiting all windows. 
+	let l:originalWindowLayout = winrestcmd() 
+
+	noautocmd windo call s:UpdateMark()
+	execute l:currentWinNr . 'wincmd w'
+	silent! execute l:originalWindowLayout
+endfunction
 " mark or unmark a regular expression
 function! s:DoMark(...) " DoMark(regexp)
-	let lastwinnr = winnr()
 	let regexp = (a:0 ? a:1 : '')
 
 	" clear all marks if regexp is null
@@ -368,8 +399,7 @@ function! s:DoMark(...) " DoMark(regexp)
 			let i += 1
 		endwhile
 		let g:mwLastSearched = ""
-		noautocmd windo call s:ClearMatches(l:indices)
-		exe lastwinnr . "wincmd w"
+		call s:MarkScope(l:indices, '')
 		return
 	endif
 
@@ -381,8 +411,7 @@ function! s:DoMark(...) " DoMark(regexp)
 				let g:mwLastSearched = ''
 			endif
 			let g:mwWord[i] = ''
-			noautocmd windo call s:MarkMatch(i, '')
-			exe lastwinnr . "wincmd w"
+			call s:MarkScope([i], '')
 			return
 		endif
 		let i += 1
@@ -401,49 +430,33 @@ function! s:DoMark(...) " DoMark(regexp)
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
 			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
-				let g:mwCycle = i + 1
-			else
-				let g:mwCycle = 0
-			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
-			exe lastwinnr . "wincmd w"
+			call s:Cycle(i)
+			call s:MarkScope([i], regexp)
 			return
 		endif
 		let i += 1
 	endwhile
 
 	" choose a mark group by cycle
-	let i = 0
-	while i < g:mwCycleMax
-		if g:mwCycle == i
-			if g:mwLastSearched == g:mwWord[i]
-				let g:mwLastSearched = ''
-			endif
-			let g:mwWord[i] = regexp
-			if (i + 1) < g:mwCycleMax
-				let g:mwCycle = i + 1
-			else
-				let g:mwCycle = 0
-			endif
-			noautocmd windo call s:MarkMatch(i, regexp)
-			exe lastwinnr . "wincmd w"
-			return
-		endif
-		let i += 1
-	endwhile
+	let i = s:Cycle()
+	if g:mwLastSearched == g:mwWord[i]
+		let g:mwLastSearched = ''
+	endif
+	let g:mwWord[i] = regexp
+	call s:MarkScope([i], regexp)
 endfunction
-
-" initialize mark colors in a new buffer
+" initialize mark colors in a (new) window
 function! s:UpdateMark()
-	let w:mwMatch = repeat([0], g:mwCycleMax)
+	if ! exists('w:mwMatch')
+		let w:mwMatch = repeat([0], g:mwCycleMax)
+	endif
 
 	let i = 0
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
-			call s:ClearMatches([i])
+			call s:MarkMatch([i], '')
 		else
-			call s:MarkMatch(i, g:mwWord[i])
+			call s:MarkMatch([i], g:mwWord[i])
 		endif
 		let i += 1
 	endwhile
