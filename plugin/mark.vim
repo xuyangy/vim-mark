@@ -43,6 +43,13 @@
 " TODO:
 " 
 " Changes:
+" 6th Jun 2009, Ingo Karkat
+"  1. Somehow s:WrapMessage() needs a redraw before the :echo to avoid that a
+"     later Vim redraw clears the wrap message. This happened when there's no
+"     statusline and thus :echo'ing into the ruler. 
+"  2. Removed line-continuations and ':set cpo=...'. Upper-cased <SID> and <CR>. 
+"  3. Added default highlighting for the special search type. 
+"
 " 2nd Jun 2009, Ingo Karkat
 "  1. Replaced highlighting via :syntax with matchadd() / matchdelete(). This
 "     requires Vim 7.2 / 7.1 with patches. This method is faster, there are no
@@ -135,16 +142,18 @@ let g:loaded_mark = 1
 
 " default colors/groups
 " you may define your own colors in your vimrc file, in the form as below:
-hi def MarkWord1  ctermbg=Cyan     ctermfg=Black  guibg=#8CCBEA    guifg=Black
-hi def MarkWord2  ctermbg=Green    ctermfg=Black  guibg=#A4E57E    guifg=Black
-hi def MarkWord3  ctermbg=Yellow   ctermfg=Black  guibg=#FFDB72    guifg=Black
-hi def MarkWord4  ctermbg=Red      ctermfg=Black  guibg=#FF7272    guifg=Black
-hi def MarkWord5  ctermbg=Magenta  ctermfg=Black  guibg=#FFB3FF    guifg=Black
-hi def MarkWord6  ctermbg=Blue     ctermfg=Black  guibg=#9999FF    guifg=Black
+highlight def MarkWord1  ctermbg=Cyan     ctermfg=Black  guibg=#8CCBEA    guifg=Black
+highlight def MarkWord2  ctermbg=Green    ctermfg=Black  guibg=#A4E57E    guifg=Black
+highlight def MarkWord3  ctermbg=Yellow   ctermfg=Black  guibg=#FFDB72    guifg=Black
+highlight def MarkWord4  ctermbg=Red      ctermfg=Black  guibg=#FF7272    guifg=Black
+highlight def MarkWord5  ctermbg=Magenta  ctermfg=Black  guibg=#FFB3FF    guifg=Black
+highlight def MarkWord6  ctermbg=Blue     ctermfg=Black  guibg=#9999FF    guifg=Black
 
-" Support for |line-continuation|
-let s:save_cpo = &cpo
-set cpo&vim
+" Default highlighting for the special search type. 
+" You can override this by defining / linking the 'SearchSpecialSearchType'
+" highlight group before this script is sourced. 
+highlight def link SearchSpecialSearchType MoreMsg
+
 
 " Default bindings
 
@@ -164,18 +173,12 @@ if !hasmapto('<Plug>MarkClear', 'n')
 	nmap <unique> <silent> <leader>n <Plug>MarkClear
 endif
 
-nnoremap <silent> <Plug>MarkSet   :call
-	\ <sid>MarkCurrentWord()<cr>
-vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call
-	\ <sid>DoMark(<sid>GetVisualSelectionEscaped("enV"))<cr>
-nnoremap <silent> <Plug>MarkRegex :call
-	\ <sid>MarkRegex()<cr>
-vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call
-	\ <sid>MarkRegex(<sid>GetVisualSelectionEscaped("N"))<cr>
-nnoremap <silent> <Plug>MarkClear :call
-	\ <sid>DoMark(<sid>CurrentMark())<cr>
-nnoremap <silent> <Plug>MarkAllClear :call
-	\ <sid>DoMark()<cr>
+nnoremap <silent> <Plug>MarkSet   :call <SID>MarkCurrentWord()<CR>
+vnoremap <silent> <Plug>MarkSet   <c-\><c-n>:call <SID>DoMark(<SID>GetVisualSelectionEscaped("enV"))<CR>
+nnoremap <silent> <Plug>MarkRegex :call <SID>MarkRegex()<CR>
+vnoremap <silent> <Plug>MarkRegex <c-\><c-n>:call <SID>MarkRegex(<SID>GetVisualSelectionEscaped("N"))<CR>
+nnoremap <silent> <Plug>MarkClear :call <SID>DoMark(<SID>CurrentMark())<CR>
+nnoremap <silent> <Plug>MarkAllClear :call <SID>DoMark()<CR>
 
 " Here is a sumerization of the following keys' behaviors:
 " 
@@ -198,12 +201,12 @@ nnoremap <silent> <Plug>MarkAllClear :call
 "       do a \*; otherwise (\/ is the
 "       most recently used), do a \/.
 
-nnoremap <silent> <Plug>MarkSearchCurrentNext :call <sid>SearchCurrentMark()<cr>
-nnoremap <silent> <Plug>MarkSearchCurrentPrev :call <sid>SearchCurrentMark("b")<cr>
-nnoremap <silent> <Plug>MarkSearchAnyNext     :call <sid>SearchAnyMark()<cr>
-nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <sid>SearchAnyMark("b")<cr>
-nnoremap <silent> <Plug>MarkSearchNext        :if !<sid>SearchNext()<bar>execute "norm! *zv"<bar>endif<cr>
-nnoremap <silent> <Plug>MarkSearchPrev        :if !<sid>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<cr>
+nnoremap <silent> <Plug>MarkSearchCurrentNext :call <SID>SearchCurrentMark()<CR>
+nnoremap <silent> <Plug>MarkSearchCurrentPrev :call <SID>SearchCurrentMark("b")<CR>
+nnoremap <silent> <Plug>MarkSearchAnyNext     :call <SID>SearchAnyMark()<CR>
+nnoremap <silent> <Plug>MarkSearchAnyPrev     :call <SID>SearchAnyMark("b")<CR>
+nnoremap <silent> <Plug>MarkSearchNext        :if !<SID>SearchNext()<bar>execute "norm! *zv"<bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchPrev        :if !<SID>SearchNext("b")<bar>execute "norm! #zv"<bar>endif<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'. 
 
@@ -516,6 +519,7 @@ endfunction
 silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.  
 if exists('*SearchSpecial#WrapMessage')
 	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
 		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
 	endfunction
 	function! s:ErrorMessage( searchType, searchPattern )
@@ -530,6 +534,7 @@ else
 		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
 	endfunction
 	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
 		let v:warningmsg = a:searchType . ' search hit ' . (a:isBackward ? 'TOP' : 'BOTTOM') . ', continuing at ' . (a:isBackward ? 'BOTTOM' : 'TOP')
 		echohl WarningMsg
 		echo s:Trim(v:warningmsg)
@@ -637,8 +642,5 @@ endfunction
 
 " Define global variables once
 call s:InitMarkVariables()
-
-" Restore previous 'cpo' value
-let &cpo = s:save_cpo
 
 " vim: ts=2 sw=2
