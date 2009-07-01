@@ -26,6 +26,8 @@ This is a continuation of vimscript #1238 by Yuheng Xie, who apparently
 doesn't maintain his original version anymore and cannot be reached via the
 email address in his profile. This script offers the following advantages over
 the original:
+- Much faster, all colored words can now be highlighted, no more clashes with
+  syntax highlighting (due to use of matchadd()). 
 - Many bug fixes. 
 - Jumps behave like the built-in search, including wrap and error messages. 
 
@@ -76,7 +78,7 @@ Put the script into your user or system Vim plugin directory
 
 DEPENDENCIES						   *mark-dependencies*
 
-- Requires Vim 7.0 or higher. 
+- Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher. 
 
 ==============================================================================
 CONFIGURATION						  *mark-configuration*
@@ -106,15 +108,21 @@ LIMITATIONS						    *mark-limitations*
 
 KNOWN PROBLEMS						 *mark-known-problems*
 
-- Some words which have been already colored by syntax scripts cannot be
-  highlighted.
-
 TODO								   *mark-todo*
 
 IDEAS								  *mark-ideas*
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.1.0	06-Jun-2009
+- Replaced highlighting via :syntax with matchadd() / matchdelete(). This
+  requires Vim 7.2 / 7.1 with patches. This method is faster, there are no
+  more clashes with syntax highlighting (:match always has preference), and
+  the background highlighting does not disappear under 'cursorline'. 
+- Using winrestcmd() to fix effects of :windo: By entering a window, its
+  height is potentially increased from 0 to 1. 
+- Handling multiple tabs by calling s:UpdateScope() on the TabEnter event. 
 
 2.0.0	01-Jun-2009
 - Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
@@ -155,7 +163,7 @@ Bug fixes and enhancements by Ingo Karkat.
   command.
 - ENH: The jumps to the next/prev occurrence now print 'search hit BOTTOM,
   continuing at TOP" and "Pattern not found:..." messages, like the * and n/N
-  VIM search commands.
+  Vim search commands.
 - ENH: Jumps now open folds if the occurrence is inside a closed fold, just
   like n/N do. 
 
