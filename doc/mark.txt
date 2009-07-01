@@ -76,7 +76,7 @@ Put the script into your user or system Vim plugin directory
 
 DEPENDENCIES						   *mark-dependencies*
 
-- Requires Vim 6.3 or higher. 
+- Requires Vim 7.0 or higher. 
 
 ==============================================================================
 CONFIGURATION						  *mark-configuration*
@@ -115,6 +115,16 @@ IDEAS								  *mark-ideas*
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.0.0	01-Jun-2009
+- Now using Vim List for g:mwWord and thus requiring Vim 7. g:mwCycle is now
+  zero-based, but the syntax groups "MarkWordx" are still one-based. 
+- Factored :syntax operations out of s:DoMark() and s:UpdateMark() so that
+  they can all be done in a single :windo. 
+- Normal mode <Plug>MarkSet now has the same semantics as its visual mode
+  cousin: If the cursor is on an existing mark, the mark is removed.
+  Beforehand, one could only remove a visually selected mark via again
+  selecting it. Now, one simply can invoke the mapping when on such a mark. 
 
 1.6.1	31-May-2009
 Publication of improved version by Ingo Karkat. 
