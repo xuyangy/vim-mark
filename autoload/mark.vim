@@ -10,12 +10,9 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.2.0
 " Changes:
 " 02-Jul-2009, Ingo Karkat
 " - Split off functions into autoload script. 
-
-let s:current_mark_position = ''
 
 "- functions ------------------------------------------------------------------
 function! s:EscapeText( text )
@@ -24,7 +21,7 @@ endfunction
 " Mark the current word, like the built-in star command. 
 " If the cursor is on an existing mark, remove it. 
 function! mark#MarkCurrentWord()
-	let l:regexp = mark#CurrentMark()
+	let l:regexp = mark#CurrentMark()[0]
 	if empty(l:regexp)
 		let l:cword = expand("<cword>")
 
@@ -216,26 +213,27 @@ function! mark#UpdateMark()
 	endwhile
 endfunction
 
-" Return the mark string under the cursor; multi-lines marks not supported. 
+" Return [mark text, mark start position] of the mark under the cursor (or
+" ['', []] if there is no mark); multi-lines marks not supported. 
 function! mark#CurrentMark()
 	let line = getline(".")
 	let i = 0
 	while i < g:mwCycleMax
 		if !empty(g:mwWord[i])
+			" Note: col() is 1-based, all other indexes zero-based! 
 			let start = 0
 			while start >= 0 && start < strlen(line) && start < col(".")
 				let b = match(line, g:mwWord[i], start)
 				let e = matchend(line, g:mwWord[i], start)
 				if b < col(".") && col(".") <= e
-					let s:current_mark_position = line(".") . "_" . b
-					return g:mwWord[i]
+					return [g:mwWord[i], [line("."), (b + 1)]]
 				endif
 				let start = e
 			endwhile
 		endif
 		let i += 1
 	endwhile
-	return ""
+	return ['', []]
 endfunction
 
 " Search current mark. 
@@ -245,22 +243,17 @@ function! mark#SearchCurrentMark(...) " SearchCurrentMark(flags)
 	if a:0 > 0
 		let flags = a:1
 	endif
-	let w = mark#CurrentMark()
-	if w != ""
-		let p = s:current_mark_position
-		let l:isFound = s:Search(w, flags, (w ==# g:mwLastSearched ? 'same-mark' : 'new-mark'))
-		call mark#CurrentMark()
-		if p == s:current_mark_position
-			let l:isFound = search(w, flags)
-		endif
-		let g:mwLastSearched = w
-	else
-		if g:mwLastSearched != ""
-			let l:isFound = s:Search(g:mwLastSearched, flags, 'same-mark')
-		else
+	let [l:markText, l:markPosition] = mark#CurrentMark()
+	if empty(l:markText)
+		if empty(g:mwLastSearched)
 			call mark#SearchAnyMark(flags)
-			let g:mwLastSearched = mark#CurrentMark()
+			let g:mwLastSearched = mark#CurrentMark()[0]
+		else
+			let l:isFound = s:Search(g:mwLastSearched, flags, [], 'same-mark')
 		endif
+	else
+		let l:isFound = s:Search(l:markText, flags, l:markPosition, (l:markText ==# g:mwLastSearched ? 'same-mark' : 'new-mark'))
+		let g:mwLastSearched = l:markText
 	endif
 	if l:isFound
 		normal! zv
@@ -307,8 +300,87 @@ else
 endif
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning. 
-function! s:Search( pattern, flags, searchType )
+function! s:Search( pattern, flags, currentMarkPosition, searchType )
 	let l:isBackward = (stridx(a:flags, 'b') != -1)
+	let l:save_view = winsaveview()
+
+	let l:count = v:count1
+	let [l:startLine, l:startCol] = [line('.'), col('.')]
+	let l:isWrapped = 0
+	let l:isMatch = 0
+	let l:line = 0
+	while l:count > 0
+		" Search for next match, 'wrapscan' applies. 
+		let [l:line, l:col] = searchpos( a:pattern, (l:isBackward ? 'b' : '') )
+
+"****D echomsg '****' l:isBackward string([l:line, l:col]) string(a:currentMarkPosition) l:count
+		if l:isBackward && l:line > 0 && [l:line, l:col] == a:currentMarkPosition && l:count == v:count1
+			" On a search in backward direction, the first match is the start of the
+			" current mark (if the cursor was positioned on the current mark text, and
+			" not at the start of the mark text). 
+			" In contrast to the normal search, this is not considered the first
+			" match. The mark text is one entity; if the cursor is positioned anywhere
+			" inside the mark text, the mark text is considered the current mark. In
+			" normal search, the cursor can be positioned anywhere (via offsets)
+			" around the search, and only that single cursor position is considered
+			" the current match. 
+			" Thus, the search is retried without a decrease of l:count, but only if
+			" this was the first match; repeat visits during wrapping around count as
+			" a regular match. The search also must not be retried when this is the
+			" first match, but we've been here before (i.e. l:isMatch is set): This
+			" means that there is only the current mark in the buffer, and we must
+			" break out of the loop and indicate that no other mark was found. 
+			if l:isMatch
+				let l:line = 0
+				break
+			endif
+
+			" The l:isMatch flag is set so if the final mark cannot be reached, the
+			" original cursor position is restored. This flag also allows us to detect
+			" whether we've been here before, which is checked above. 
+			let l:isMatch = 1
+		elseif l:line > 0
+			let l:isMatch = 1
+			let l:count -= 1
+
+			" Note: No need to check 'wrapscan'; the wrapping can only occur if
+			" 'wrapscan' is actually on. 
+			if ! l:isBackward && (l:startLine > l:line || l:startLine == l:line && l:startCol >= l:col)
+				let l:isWrapped = 1
+			elseif l:isBackward && (l:startLine < l:line || l:startLine == l:line && l:startCol <= l:col)
+				let l:isWrapped = 1
+			endif
+		else
+			break
+		endif
+	endwhile
+	
+	" We're not stuck when the search wrapped around and landed on the current
+	" mark; that's why we exclude a possible wrap-around via v:count1 == 1. 
+	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && v:count1 == 1)
+	if l:line > 0 && ! l:isStuckAtCurrentMark
+		" normal! zv
+
+		if l:isWrapped
+			call s:WrapMessage(a:searchType, a:pattern, l:isBackward)
+		else
+			call s:EchoSearchPattern(a:searchType, a:pattern, l:isBackward)
+		endif
+		return 1
+	else
+		if l:isMatch
+			" The view has been changed by moving through matches until the end /
+			" start of file, when 'nowrapscan' forced a stop of searching before the
+			" l:count'th match was found. 
+			" Restore the view to the state before the search. 
+			call winrestview(l:save_view)
+		endif
+		call s:ErrorMessage(a:searchType, a:pattern)
+		return 0
+	endif
+
+
+
 	let l:isFound = 0
 	let l:isWrap = 0
 	if &wrapscan
@@ -353,18 +425,9 @@ function! mark#SearchAnyMark(...) " SearchAnyMark(flags)
 	if a:0 > 0
 		let flags = a:1
 	endif
-	let w = mark#CurrentMark()
-	if w != ""
-		let p = s:current_mark_position
-	else
-		let p = ""
-	endif
-	let w = s:AnyMark()
-	let l:isFound =  s:Search(w, flags, 'any-mark')
-	call mark#CurrentMark()
-	if p == s:current_mark_position
-		let l:isFound =  search(w, flags)
-	endif
+	let l:markPosition = mark#CurrentMark()[1]
+	let l:markText = s:AnyMark()
+	let l:isFound = s:Search(l:markText, flags, l:markPosition, 'any-mark')
 	let g:mwLastSearched = ""
 	if l:isFound
 		normal! zv
@@ -377,8 +440,8 @@ function! mark#SearchNext(...) " SearchNext(flags)
 	if a:0 > 0
 		let flags = a:1
 	endif
-	let w = mark#CurrentMark()
-	if w != ""
+	let l:markText = mark#CurrentMark()[0]
+	if l:markText != ""
 		if g:mwLastSearched != ""
 			call mark#SearchCurrentMark(flags)
 		else
