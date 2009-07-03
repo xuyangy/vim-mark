@@ -10,6 +10,7 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
+" Version:     2.2.0
 " Changes:
 " 02-Jul-2009, Ingo Karkat
 " - Split off functions into autoload script. 
@@ -308,56 +309,6 @@ endif
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning. 
 function! s:Search( pattern, flags, searchType )
 	let l:isBackward = (stridx(a:flags, 'b') != -1)
-	let l:save_view = winsaveview()
-
-	let l:count = v:count1
-	let [l:startLine, l:startCol] = [line('.'), col('.')]
-	let l:isWrapped = 0
-	let l:isMatch = 0
-	let l:line = 0
-	while l:count > 0
-		" Search for next match, 'wrapscan' applies. 
-		let [l:line, l:col] = searchpos( a:pattern, (l:isBackward ? 'b' : '') )
-
-		if l:line > 0
-			let l:isMatch = 1
-			let l:count -= 1
-
-			" Note: No need to check 'wrapscan'; the wrapping can only occur if
-			" 'wrapscan' is actually on. 
-			if ! l:isBackward && (l:startLine > l:line || l:startLine == l:line && l:startCol >= l:col)
-				let l:isWrapped = 1
-			elseif l:isBackward && (l:startLine < l:line || l:startLine == l:line && l:startCol <= l:col)
-				let l:isWrapped = 1
-			endif
-		else
-			break
-		endif
-	endwhile
-	
-	if l:line > 0
-		" normal! zv
-
-		if l:isWrapped
-			call s:WrapMessage(a:searchType, a:pattern, l:isBackward)
-		else
-			call s:EchoSearchPattern(a:searchType, a:pattern, l:isBackward)
-		endif
-		return 1
-	else
-		if l:isMatch
-			" The view has been changed by moving through matches until the end /
-			" start of file, when 'nowrapscan' forced a stop of searching before the
-			" l:count'th match was found. 
-			" Restore the view to the state before the search. 
-			call winrestview(l:save_view)
-		endif
-		call s:ErrorMessage(a:searchType, a:pattern)
-		return 0
-	endif
-
-
-
 	let l:isFound = 0
 	let l:isWrap = 0
 	if &wrapscan
@@ -409,10 +360,10 @@ function! mark#SearchAnyMark(...) " SearchAnyMark(flags)
 		let p = ""
 	endif
 	let w = s:AnyMark()
-	let l:isFound = s:Search(w, flags, 'any-mark')
+	let l:isFound =  s:Search(w, flags, 'any-mark')
 	call mark#CurrentMark()
 	if p == s:current_mark_position
-		let l:isFound = search(w, flags)
+		let l:isFound =  search(w, flags)
 	endif
 	let g:mwLastSearched = ""
 	if l:isFound
