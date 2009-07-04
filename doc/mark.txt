@@ -73,8 +73,13 @@ Searching:
 ==============================================================================
 INSTALLATION						   *mark-installation*
 
-Put the script into your user or system Vim plugin directory
-(e.g. ~/.vim/plugin). 
+This script is packaged as a|vimball|. If you have the "gunzip" decompressor
+in your PATH, simply edit the *.vba.gz package in Vim; otherwise, decompress
+the archive first, e.g. using WinZip. Inside Vim, install by sourcing the
+vimball or via the|:UseVimball|command. >
+    vim mark.vba.gz
+    :so %
+To uninstall, use the|:RmVimball|command. 
 
 DEPENDENCIES						   *mark-dependencies*
 
@@ -114,6 +119,14 @@ IDEAS								  *mark-ideas*
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.2.0	02-Jul-2009
+- Split off functions into autoload script. 
+- Initialization of global variables and autocommands is now done lazily on
+  the first use, not during loading of the plugin. This reduces Vim startup
+  time and footprint as long as the functionality isn't yet used. 
+- Split off documentation into separate help file. Now packaging as VimBall.
+
 
 2.1.0	06-Jun-2009
 - Replaced highlighting via :syntax with matchadd() / matchdelete(). This
