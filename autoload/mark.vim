@@ -25,6 +25,8 @@
 " - Removed delegation to SearchSpecial#ErrorMessage(), because the fallback
 "   implementation is perfectly fine and the SearchSpecial routine changed its
 "   output format into something unsuitable anyway. 
+" - Using descriptive text instead of "@" (and appropriate highlighting) when
+"   querying for the pattern to mark. 
 "
 " 02-Jul-2009, Ingo Karkat
 " - Split off functions into autoload script. 
@@ -88,7 +90,9 @@ endfunction
 " Manually input a regular expression. 
 function! mark#MarkRegex( regexpPreset )
 	call inputsave()
-	let l:regexp = input("@", a:regexpPreset)
+	echohl Question
+	let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
+	echohl None
 	call inputrestore()
 	if ! empty(l:regexp)
 		call mark#DoMark(l:regexp)
