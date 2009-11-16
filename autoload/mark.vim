@@ -344,8 +344,10 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 			" not at the start of the mark text). 
 			" In contrast to the normal search, this is not considered the first
 			" match. The mark text is one entity; if the cursor is positioned anywhere
-			" inside the mark text, the mark text is considered the current mark. In
-			" normal search, the cursor can be positioned anywhere (via offsets)
+			" inside the mark text, the mark text is considered the current mark. The
+			" built-in '*' and '#' commands behave in the same way; the entire <cword>
+			" text is considered the current match, and jumps move outside that text.
+			" In normal search, the cursor can be positioned anywhere (via offsets)
 			" around the search, and only that single cursor position is considered
 			" the current match. 
 			" Thus, the search is retried without a decrease of l:count, but only if
