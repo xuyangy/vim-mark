@@ -4,9 +4,9 @@
 		       (original version by Yuheng Xie)
 								    *mark.vim*
 description			|mark-description|
-usage	    			|mark-usage|
-installation   			|mark-installation|
-configuration  			|mark-configuration|
+usage				|mark-usage|
+installation			|mark-installation|
+configuration			|mark-configuration|
 integration			|mark-integration|
 limitations			|mark-limitations|
 known problems			|mark-known-problems|
@@ -16,7 +16,7 @@ history				|mark-history|
 ==============================================================================
 DESCRIPTION						    *mark-description*
 
-This script adds mappings and a :Mark command to highlight several words in
+This plugin adds mappings and a :Mark command to highlight several words in
 different colors simultaneously, similar to the built-in 'hlsearch'
 highlighting of search results and the * |star| command. For example, when you
 are browsing a big program file, you could highlight multiple identifiers in
@@ -24,7 +24,7 @@ parallel. This will make it easier to trace the source code.
 
 This is a continuation of vimscript #1238 by Yuheng Xie, who apparently
 doesn't maintain his original version anymore and cannot be reached via the
-email address in his profile. This script offers the following advantages over
+email address in his profile. This plugin offers the following advantages over
 the original:
 - Much faster, all colored words can now be highlighted, no more clashes with
   syntax highlighting (due to use of matchadd()). 
@@ -44,7 +44,7 @@ RELATED WORKS *
 ==============================================================================
 USAGE								  *mark-usage*
 
-Highlighting:
+HIGHLIGHTING						   *mark-highlighting*
 
 <Leader>m		Mark or unmark the word under the cursor, similar to
 			the |star| command. 
@@ -61,7 +61,8 @@ Highlighting:
 			'smartcase' setting, only 'ignorecase'. 
 :Mark			Clear all marks. 
 
-Searching:
+
+SEARCHING						      *mark-searching*
 
 [count]*         [count]#
 [count]<Leader>* [count]<Leader>#
@@ -90,6 +91,9 @@ Searching:
 			search does not jump to the beginning of the current
 			mark (like the built-in search), but to the previous
 			mark. The entire mark text is treated as one entity. 
+
+			You can use Vim's |jumplist| to go back to previous
+			mark matches and the position before a mark search. 
 
 ==============================================================================
 INSTALLATION						   *mark-installation*
@@ -160,6 +164,12 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.4.0	13-Jul-2010
+- ENH: The MarkSearch mappings (<Leader>[*#/?]) add the original cursor
+  position to the jump list, like the built-in [/?*#nN] commands. This allows
+  to use the regular jump commands for mark matches, like with regular search
+  matches. 
 
 2.3.3	19-Feb-2010
 - BUG: Clearing of an accidental zero-width match (e.g. via :Mark \zs) results
