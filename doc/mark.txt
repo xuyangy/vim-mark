@@ -7,7 +7,6 @@ description			|mark-description|
 usage				|mark-usage|
 installation			|mark-installation|
 configuration			|mark-configuration|
-integration			|mark-integration|
 limitations			|mark-limitations|
 known problems			|mark-known-problems|
 todo				|mark-todo|
@@ -33,27 +32,32 @@ the original:
 - Like the built-in commands, jumps take an optional [count] to quickly skip
   over some marks. 
 
-RELATED WORKS *
+RELATED WORKS								     *
+
 - MultipleSearch (vimscript #479) can highlight in a single window and in all
   buffers, but still relies on the :syntax highlighting method, which is
   slower and less reliable. 
 - http://vim.wikia.com/wiki/Highlight_multiple_words offers control over the
   color used by mapping the 1-9 keys on the numeric keypad, persistence, and
   highlights only a single window. 
+- highlight.vim (vimscript #1599) highlights lines or patterns of interest in
+  different colors, using mappings that start with CTRL-H and work on cword. 
 
 ==============================================================================
 USAGE								  *mark-usage*
 
 HIGHLIGHTING						   *mark-highlighting*
-
+						     *<Leader>m* *v_<Leader>m*
 <Leader>m		Mark or unmark the word under the cursor, similar to
 			the |star| command. 
 {Visual}<Leader>m	Mark or unmark the visual selection. 
+						     *<Leader>r* *v_<Leader>r*
 <Leader>r		Manually input a regular expression to highlight. 
 {Visual}<Leader>r	(Based on the visual selection.) 
 			In accordance with the built-in |star| command,
 			all these mappings use 'ignorecase', but not
 			'smartcase'. 
+								   *<Leader>n*
 <Leader>n		Clear the mark under the cursor / all marks. 
 								       *:Mark*
 :Mark {pattern}		Mark or unmark {pattern}. 
@@ -63,7 +67,7 @@ HIGHLIGHTING						   *mark-highlighting*
 
 
 SEARCHING						      *mark-searching*
-
+			    *<Leader>star* *<Leader>#* *<Leader>/* *<Leader>?*
 [count]*         [count]#
 [count]<Leader>* [count]<Leader>#
 [count]<Leader>/ [count]<Leader>?
@@ -131,9 +135,6 @@ this plugin is sourced. To remove the default overriding of * and #, use: >
     nmap <Plug>IgnoreMarkSearchPrev <Plug>MarkSearchPrev
 <
 ==============================================================================
-INTEGRATION						    *mark-integration*
-
-==============================================================================
 LIMITATIONS						    *mark-limitations*
 
 - If the 'ignorecase' setting is changed, there will be discrepancies between
@@ -164,6 +165,15 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.4.2	14-Jan-2011
+- FIX: Capturing the visual selection could still clobber the blockwise yank
+  mode of the unnamed register. 
+
+2.4.1	13-Jan-2011
+- FIX: Using a named register for capturing the visual selection on
+  {Visual}<Leader>m and {Visual}<Leader>r clobbered the unnamed register. Now
+  using the unnamed register. 
 
 2.4.0	13-Jul-2010
 - ENH: The MarkSearch mappings (<Leader>[*#/?]) add the original cursor
@@ -260,7 +270,7 @@ Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
 Copyright: (C) 2005-2008 by Yuheng Xie
-           (C) 2008-2010 by Ingo Karkat
+           (C) 2008-2011 by Ingo Karkat
 The VIM LICENSE applies to this script; see|copyright|. 
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
