@@ -10,8 +10,12 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.4.1
+" Version:     2.4.2
 " Changes:
+" 14-Jan-2011, Ingo Karkat
+" - FIX: Capturing the visual selection could still clobber the blockwise yank
+"   mode of the unnamed register. 
+"
 " 13-Jan-2011, Ingo Karkat
 " - FIX: Using a named register for capturing the visual selection on
 "   {Visual}<Leader>m and {Visual}<Leader>r clobbered the unnamed register. Now
@@ -90,10 +94,11 @@ endfunction
 function! s:GetVisualSelection()
 	let save_clipboard = &clipboard
 	set clipboard= " Avoid clobbering the selection and clipboard registers. 
-	let save_reg = @@
+	let save_reg = getreg('"')
+	let save_regmode = getregtype('"')
 	silent normal! gvy
-	let res = @@
-	let @@ = save_reg
+	let res = getreg('"')
+	call setreg('"', save_reg, save_regmode)
 	let &clipboard = save_clipboard
 	return res
 endfunction
