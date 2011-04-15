@@ -10,8 +10,18 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.4.2
+" Version:     2.4.3
 " Changes:
+" 15-Apr-2011, Ingo Karkat
+" - Robustness: Moved initialization of w:mwMatch from mark#UpdateMark() to
+"   s:MarkMatch(), where the variable is actually used. I had encountered cases
+"   where it w:mwMatch was undefined when invoked through mark#DoMark() ->
+"   s:MarkScope() -> s:MarkMatch(). This can be forced by :unlet w:mwMatch
+"   followed by :Mark foo. 
+" - Robustness: Checking for g:mwCycleMax == 0 in mark#DoMark(), trying to
+"   re-detect the mark highlightings and finally printing an error instead of
+"   choking. This can happen when somehow no mark highlightings are defined. 
+"
 " 14-Jan-2011, Ingo Karkat
 " - FIX: Capturing the visual selection could still clobber the blockwise yank
 "   mode of the unnamed register. 
@@ -130,6 +140,10 @@ endfunction
 
 " Set / clear matches in the current window. 
 function! s:MarkMatch( indices, expr )
+	if ! exists('w:mwMatch')
+		let w:mwMatch = repeat([0], g:mwCycleMax)
+	endif
+
 	for l:index in a:indices
 		if w:mwMatch[l:index] > 0
 			silent! call matchdelete(w:mwMatch[l:index])
@@ -207,6 +221,21 @@ function! mark#DoMark(...) " DoMark(regexp)
 		let i += 1
 	endwhile
 
+	if g:mwCycleMax <= 0
+		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
+		unlet g:mwCycleMax
+		unlet g:mwWord
+		call s:InitMarkVariables()
+		if g:mwCycleMax <= 0
+			" Still no mark highlightings; complain. 
+			let v:errmsg = 'No mark highlightings defined'
+			echohl ErrorMsg
+			echomsg v:errmsg
+			echohl None
+			return
+		endif
+	endif
+
 	" add to history
 	if stridx(g:mwHistAdd, "/") >= 0
 		call histadd("/", regexp)
@@ -237,10 +266,6 @@ function! mark#DoMark(...) " DoMark(regexp)
 endfunction
 " Initialize mark colors in a (new) window. 
 function! mark#UpdateMark()
-	if ! exists('w:mwMatch')
-		let w:mwMatch = repeat([0], g:mwCycleMax)
-	endif
-
 	let i = 0
 	while i < g:mwCycleMax
 		if empty(g:mwWord[i])
@@ -481,11 +506,10 @@ function! s:InitMarkVariables()
 		let g:mwHistAdd = "/@"
 	endif
 	if !exists("g:mwCycleMax")
-		let i = 1
-		while hlexists("MarkWord" . i)
-			let i = i + 1
+		let g:mwCycleMax = 0
+		while hlexists('MarkWord' . (g:mwCycleMax + 1))
+			let g:mwCycleMax += 1
 		endwhile
-		let g:mwCycleMax = i - 1
 	endif
 	if !exists("g:mwCycle")
 		let g:mwCycle = 0
