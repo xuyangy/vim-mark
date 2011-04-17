@@ -10,13 +10,8 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.4.4
+" Version:     2.4.3
 " Changes:
-" 18-Apr-2011, Ingo Karkat
-"	- BUG: Include trailing newline character in check for current mark, so that a
-"		mark that matches the entire line (e.g. created by V<Leader>m) can be
-"		cleared via <Leader>n. Thanks to ping for reporting this. 
-"
 " 16-Apr-2011, Ingo Karkat
 " - Move configuration variable g:mwHistAdd to plugin/mark.vim (as is customary)
 "   and make the remaining g:mw... variables script-local, as these contain
@@ -96,14 +91,14 @@ endfunction
 function! mark#MarkCurrentWord()
 	let l:regexp = mark#CurrentMark()[0]
 	if empty(l:regexp)
-		let l:cword = expand('<cword>')
-		if ! empty(l:cword)
+		let l:cword = expand("<cword>")
+
+		" The star command only creates a \<whole word\> search pattern if the
+		" <cword> actually only consists of keyword characters. 
+		if l:cword =~# '^\k\+$'
+			let l:regexp = '\<' . s:EscapeText(l:cword) . '\>'
+		elseif l:cword != ''
 			let l:regexp = s:EscapeText(l:cword)
-			" The star command only creates a \<whole word\> search pattern if the
-			" <cword> actually only consists of keyword characters. 
-			if l:cword =~# '^\k\+$'
-				let l:regexp = '\<' . l:regexp . '\>'
-			endif
 		endif
 	endif
 
@@ -287,11 +282,9 @@ function! mark#UpdateMark()
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
-" ['', []] if there is no mark). 
-" The mark can include the trailing newline character that concludes the line,
-" but marks that span multiple lines are not supported. 
+" ['', []] if there is no mark); multi-lines marks not supported. 
 function! mark#CurrentMark()
-	let line = getline(".") . "\n"
+	let line = getline(".")
 	let i = 0
 	while i < s:cycleMax
 		if !empty(s:pattern[i])
