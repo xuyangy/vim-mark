@@ -10,15 +10,26 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.4.3
+" Version:     2.4.4
 " Changes:
+" 18-Apr-2011, Ingo Karkat
+"	- BUG: Include trailing newline character in check for current mark, so that a
+"		mark that matches the entire line (e.g. created by V<Leader>m) can be
+"		cleared via <Leader>n. Thanks to ping for reporting this. 
+"
+" 16-Apr-2011, Ingo Karkat
+" - Move configuration variable g:mwHistAdd to plugin/mark.vim (as is customary)
+"   and make the remaining g:mw... variables script-local, as these contain
+"   internal housekeeping information that does not need to be accessible by the
+"   user. 
+"
 " 15-Apr-2011, Ingo Karkat
-" - Robustness: Moved initialization of w:mwMatch from mark#UpdateMark() to
+" - Robustness: Move initialization of w:mwMatch from mark#UpdateMark() to
 "   s:MarkMatch(), where the variable is actually used. I had encountered cases
 "   where it w:mwMatch was undefined when invoked through mark#DoMark() ->
 "   s:MarkScope() -> s:MarkMatch(). This can be forced by :unlet w:mwMatch
 "   followed by :Mark foo. 
-" - Robustness: Checking for g:mwCycleMax == 0 in mark#DoMark(), trying to
+" - Robustness: Checking for s:cycleMax == 0 in mark#DoMark(), trying to
 "   re-detect the mark highlightings and finally printing an error instead of
 "   choking. This can happen when somehow no mark highlightings are defined. 
 "
@@ -85,14 +96,14 @@ endfunction
 function! mark#MarkCurrentWord()
 	let l:regexp = mark#CurrentMark()[0]
 	if empty(l:regexp)
-		let l:cword = expand("<cword>")
-
-		" The star command only creates a \<whole word\> search pattern if the
-		" <cword> actually only consists of keyword characters. 
-		if l:cword =~# '^\k\+$'
-			let l:regexp = '\<' . s:EscapeText(l:cword) . '\>'
-		elseif l:cword != ''
+		let l:cword = expand('<cword>')
+		if ! empty(l:cword)
 			let l:regexp = s:EscapeText(l:cword)
+			" The star command only creates a \<whole word\> search pattern if the
+			" <cword> actually only consists of keyword characters. 
+			if l:cword =~# '^\k\+$'
+				let l:regexp = '\<' . l:regexp . '\>'
+			endif
 		endif
 	endif
 
@@ -132,16 +143,16 @@ function! mark#MarkRegex( regexpPreset )
 endfunction
 
 function! s:Cycle( ... )
-	let l:currentCycle = g:mwCycle
-	let l:newCycle = (a:0 ? a:1 : g:mwCycle) + 1
-	let g:mwCycle = (l:newCycle < g:mwCycleMax ? l:newCycle : 0)
+	let l:currentCycle = s:cycle
+	let l:newCycle = (a:0 ? a:1 : s:cycle) + 1
+	let s:cycle = (l:newCycle < s:cycleMax ? l:newCycle : 0)
 	return l:currentCycle
 endfunction
 
 " Set / clear matches in the current window. 
 function! s:MarkMatch( indices, expr )
 	if ! exists('w:mwMatch')
-		let w:mwMatch = repeat([0], g:mwCycleMax)
+		let w:mwMatch = repeat([0], s:cycleMax)
 	endif
 
 	for l:index in a:indices
@@ -195,38 +206,36 @@ function! mark#DoMark(...) " DoMark(regexp)
 	if empty(regexp)
 		let i = 0
 		let indices = []
-		while i < g:mwCycleMax
-			if !empty(g:mwWord[i])
-				let g:mwWord[i] = ''
+		while i < s:cycleMax
+			if !empty(s:pattern[i])
+				let s:pattern[i] = ''
 				call add(indices, i)
 			endif
 			let i += 1
 		endwhile
-		let g:mwLastSearched = ""
+		let s:lastSearch = ""
 		call s:MarkScope(l:indices, '')
 		return
 	endif
 
 	" clear the mark if it has been marked
 	let i = 0
-	while i < g:mwCycleMax
-		if regexp == g:mwWord[i]
-			if g:mwLastSearched == g:mwWord[i]
-				let g:mwLastSearched = ''
+	while i < s:cycleMax
+		if regexp == s:pattern[i]
+			if s:lastSearch == s:pattern[i]
+				let s:lastSearch = ''
 			endif
-			let g:mwWord[i] = ''
+			let s:pattern[i] = ''
 			call s:MarkScope([i], '')
 			return
 		endif
 		let i += 1
 	endwhile
 
-	if g:mwCycleMax <= 0
+	if s:cycleMax <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
-		unlet g:mwCycleMax
-		unlet g:mwWord
 		call s:InitMarkVariables()
-		if g:mwCycleMax <= 0
+		if s:cycleMax <= 0
 			" Still no mark highlightings; complain. 
 			let v:errmsg = 'No mark highlightings defined'
 			echohl ErrorMsg
@@ -237,18 +246,18 @@ function! mark#DoMark(...) " DoMark(regexp)
 	endif
 
 	" add to history
-	if stridx(g:mwHistAdd, "/") >= 0
-		call histadd("/", regexp)
+	if stridx(g:mwHistAdd, '/') >= 0
+		call histadd('/', regexp)
 	endif
-	if stridx(g:mwHistAdd, "@") >= 0
-		call histadd("@", regexp)
+	if stridx(g:mwHistAdd, '@') >= 0
+		call histadd('@', regexp)
 	endif
 
 	" choose an unused mark group
 	let i = 0
-	while i < g:mwCycleMax
-		if empty(g:mwWord[i])
-			let g:mwWord[i] = regexp
+	while i < s:cycleMax
+		if empty(s:pattern[i])
+			let s:pattern[i] = regexp
 			call s:Cycle(i)
 			call s:MarkScope([i], regexp)
 			return
@@ -258,39 +267,41 @@ function! mark#DoMark(...) " DoMark(regexp)
 
 	" choose a mark group by cycle
 	let i = s:Cycle()
-	if g:mwLastSearched == g:mwWord[i]
-		let g:mwLastSearched = ''
+	if s:lastSearch == s:pattern[i]
+		let s:lastSearch = ''
 	endif
-	let g:mwWord[i] = regexp
+	let s:pattern[i] = regexp
 	call s:MarkScope([i], regexp)
 endfunction
 " Initialize mark colors in a (new) window. 
 function! mark#UpdateMark()
 	let i = 0
-	while i < g:mwCycleMax
-		if empty(g:mwWord[i])
+	while i < s:cycleMax
+		if empty(s:pattern[i])
 			call s:MarkMatch([i], '')
 		else
-			call s:MarkMatch([i], g:mwWord[i])
+			call s:MarkMatch([i], s:pattern[i])
 		endif
 		let i += 1
 	endwhile
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
-" ['', []] if there is no mark); multi-lines marks not supported. 
+" ['', []] if there is no mark). 
+" The mark can include the trailing newline character that concludes the line,
+" but marks that span multiple lines are not supported. 
 function! mark#CurrentMark()
-	let line = getline(".")
+	let line = getline(".") . "\n"
 	let i = 0
-	while i < g:mwCycleMax
-		if !empty(g:mwWord[i])
+	while i < s:cycleMax
+		if !empty(s:pattern[i])
 			" Note: col() is 1-based, all other indexes zero-based! 
 			let start = 0
 			while start >= 0 && start < strlen(line) && start < col(".")
-				let b = match(line, g:mwWord[i], start)
-				let e = matchend(line, g:mwWord[i], start)
+				let b = match(line, s:pattern[i], start)
+				let e = matchend(line, s:pattern[i], start)
 				if b < col(".") && col(".") <= e
-					return [g:mwWord[i], [line("."), (b + 1)]]
+					return [s:pattern[i], [line("."), (b + 1)]]
 				endif
 				if b == e
 					break
@@ -307,15 +318,15 @@ endfunction
 function! mark#SearchCurrentMark( isBackward )
 	let [l:markText, l:markPosition] = mark#CurrentMark()
 	if empty(l:markText)
-		if empty(g:mwLastSearched)
+		if empty(s:lastSearch)
 			call mark#SearchAnyMark(a:isBackward)
-			let g:mwLastSearched = mark#CurrentMark()[0]
+			let s:lastSearch = mark#CurrentMark()[0]
 		else
-			call s:Search(g:mwLastSearched, a:isBackward, [], 'same-mark')
+			call s:Search(s:lastSearch, a:isBackward, [], 'same-mark')
 		endif
 	else
-		call s:Search(l:markText, a:isBackward, l:markPosition, (l:markText ==# g:mwLastSearched ? 'same-mark' : 'new-mark'))
-		let g:mwLastSearched = l:markText
+		call s:Search(l:markText, a:isBackward, l:markPosition, (l:markText ==# s:lastSearch ? 'same-mark' : 'new-mark'))
+		let s:lastSearch = l:markText
 	endif
 endfunction
 
@@ -466,7 +477,7 @@ endfunction
 
 " Combine all marks into one regexp. 
 function! s:AnyMark()
-	return join(filter(copy(g:mwWord), '! empty(v:val)'), '\|')
+	return join(filter(copy(s:pattern), '! empty(v:val)'), '\|')
 endfunction
 
 " Search any mark. 
@@ -474,7 +485,7 @@ function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
 	call s:Search(l:markText, a:isBackward, l:markPosition, 'any-mark')
-	let g:mwLastSearched = ""
+	let s:lastSearch = ""
 endfunction
 
 " Search last searched mark. 
@@ -483,7 +494,7 @@ function! mark#SearchNext( isBackward )
 	if empty(l:markText)
 		return 0
 	else
-		if empty(g:mwLastSearched)
+		if empty(s:lastSearch)
 			call mark#SearchAnyMark(a:isBackward)
 		else
 			call mark#SearchCurrentMark(a:isBackward)
@@ -502,24 +513,13 @@ augroup END
 
 " Define global variables and initialize current scope.  
 function! s:InitMarkVariables()
-	if !exists("g:mwHistAdd")
-		let g:mwHistAdd = "/@"
-	endif
-	if !exists("g:mwCycleMax")
-		let g:mwCycleMax = 0
-		while hlexists('MarkWord' . (g:mwCycleMax + 1))
-			let g:mwCycleMax += 1
-		endwhile
-	endif
-	if !exists("g:mwCycle")
-		let g:mwCycle = 0
-	endif
-	if !exists("g:mwWord")
-		let g:mwWord = repeat([''], g:mwCycleMax)
-	endif
-	if !exists("g:mwLastSearched")
-		let g:mwLastSearched = ""
-	endif
+	let s:cycleMax = 0
+	while hlexists('MarkWord' . (s:cycleMax + 1))
+		let s:cycleMax += 1
+	endwhile
+	let s:cycle = 0
+	let s:pattern = repeat([''], s:cycleMax)
+	let s:lastSearch = ""
 endfunction
 call s:InitMarkVariables()
 call mark#UpdateScope()
