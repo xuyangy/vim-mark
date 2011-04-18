@@ -138,8 +138,16 @@ endif
 let g:loaded_mark = 1
 
 "- configuration --------------------------------------------------------------
-if !exists('g:mwHistAdd')
+if ! exists('g:mwHistAdd')
 	let g:mwHistAdd = '/@'
+endif
+
+if ! exists('g:mwAutoLoadMarks')
+	let g:mwAutoLoadMarks = 1
+endif
+
+if ! exists('g:mwAutoSaveMarks')
+	let g:mwAutoSaveMarks = 1
 endif
 
 
@@ -219,5 +227,19 @@ endif
 
 "- commands -------------------------------------------------------------------
 command! -nargs=? Mark call mark#DoMark(<f-args>)
+
+
+"- marks persistence ----------------------------------------------------------
+if g:mwAutoLoadMarks
+	" As the viminfo is only processed after sourcing of the runtime files, the
+	" persistent global variables are not yet available here. Defer this until Vim
+	" startup has completed. 
+	augroup MarkInitialization
+		autocmd!
+		" Persistent global variables cannot be of type List, so we actually store
+		" the string representation, and eval() it back to a List. 
+		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') | execute 'call mark#Load(' . g:MARK_MARKS . ')' | endif
+	augroup END
+endif
 
 " vim: ts=2 sw=2
