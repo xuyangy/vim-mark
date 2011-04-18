@@ -228,6 +228,29 @@ endif
 "- commands -------------------------------------------------------------------
 command! -nargs=? Mark call mark#DoMark(<f-args>)
 
+command! -bar -bang MarkLoad
+\	if exists('g:MARK_MARKS') |
+\		execute 'let s:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')' |
+\		if <bang>1 |
+\			if s:loadedMarkNum == 0 |
+\				echomsg 'No persistent marks found' |
+\			else |
+\				echomsg printf('Loaded %d mark%s', s:loadedMarkNum, (s:loadedMarkNum == 1 ? '' : 's')) |
+\			endif |
+\		endif |
+\	elseif <bang>1 |
+\		echoerr 'No persistent marks found' |
+\	endif
+command! -bar MarkSave
+\	let s:savedMarks = mark#ToPatternList() |
+\	let g:MARK_MARKS = string(s:savedMarks) |
+\	if empty(s:savedMarks) |
+\		let v:warningmsg = 'No marks defined' |
+\		echohl WarningMsg |
+\		echomsg v:warningmsg |
+\		echohl None |
+\	endif
+
 
 "- marks persistence ----------------------------------------------------------
 if g:mwAutoLoadMarks
@@ -238,7 +261,7 @@ if g:mwAutoLoadMarks
 		autocmd!
 		" Persistent global variables cannot be of type List, so we actually store
 		" the string representation, and eval() it back to a List. 
-		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') | execute 'call mark#Load(' . g:MARK_MARKS . ')' | endif
+		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') | MarkLoad! | endif
 	augroup END
 endif
 
