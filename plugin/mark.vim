@@ -137,9 +137,15 @@ if exists('g:loaded_mark') || (v:version == 701 && ! exists('*matchadd')) || (v:
 endif
 let g:loaded_mark = 1
 
+"- configuration --------------------------------------------------------------
+if !exists('g:mwHistAdd')
+	let g:mwHistAdd = '/@'
+endif
+
+
 "- default highlightings ------------------------------------------------------
 function! s:DefaultHighlightings()
-"		You may define your own colors in your vimrc file, in the form as below:
+	" You may define your own colors in your vimrc file, in the form as below:
 	highlight def MarkWord1  ctermbg=Cyan     ctermfg=Black  guibg=#8CCBEA    guifg=Black
 	highlight def MarkWord2  ctermbg=Green    ctermfg=Black  guibg=#A4E57E    guifg=Black
 	highlight def MarkWord3  ctermbg=Yellow   ctermfg=Black  guibg=#FFDB72    guifg=Black
