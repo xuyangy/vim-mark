@@ -253,7 +253,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
-		call s:InitMarkVariables()
+		call mark#Init()
 		if s:markNum <= 0
 			" Still no mark highlightings; complain. 
 			let v:errmsg = 'No mark highlightings defined'
@@ -527,25 +527,55 @@ function! mark#SearchNext( isBackward )
 	endif
 endfunction
 
+" Load mark patterns from list. 
+function! mark#Load( pattern )
+	if s:markNum > 0 && len(a:pattern) > 0
+		" Initialize mark patterns with the passed list. Ensure that, regardless of
+		" the list length, s:pattern contains exactly s:markNum elements. 
+		let s:pattern = a:pattern[0:(s:markNum - 1)]
+		let s:pattern += repeat([''], (s:markNum - len(s:pattern)))
+
+		call mark#UpdateScope()
+
+		" The list of patterns may be sparse, return only the actual patterns. 
+		return len(filter(copy(a:pattern)), '! empty(v:val)')
+	endif
+	return 0
+endfunction
+
+" Access the list of mark patterns. 
+function! mark#ToPatternList()
+	" Trim unused patterns from the end of the list, the amount of available marks
+	" may differ on the next invocation (e.g. due to a different number of
+	" highlight groups in Vim and GVIM). We want to keep empty patterns in the
+	" front and middle to maintain the mapping to highlight groups, though. 
+	let l:highestNonEmptyIndex = s:markNum -1
+	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex])
+		let l:highestNonEmptyIndex -= 1
+	endwhile
+
+	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0:l:highestNonEmptyIndex])
+endfunction
+
+
 "- initializations ------------------------------------------------------------
 augroup Mark
 	autocmd!
-	autocmd VimEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
 	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
 	autocmd TabEnter * call mark#UpdateScope()
 augroup END
 
 " Define global variables and initialize current scope.  
-function! s:InitMarkVariables()
+function! mark#Init()
 	let s:markNum = 0
 	while hlexists('MarkWord' . (s:markNum + 1))
 		let s:markNum += 1
 	endwhile
-	let s:cycle = 0
 	let s:pattern = repeat([''], s:markNum)
-	let s:lastSearch = ""
+	let s:cycle = 0
+	let s:lastSearch = ''
 endfunction
-call s:InitMarkVariables()
+call mark#Init()
 call mark#UpdateScope()
 
 " vim: ts=2 sw=2
