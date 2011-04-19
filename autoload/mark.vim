@@ -10,8 +10,19 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.4.4
+" Version:     2.5.0
 " Changes:
+" 19-Apr-2011, Ingo Karkat
+" - ENH: Add enabling functions for mark persistence: mark#Load() and
+"   mark#ToPatternList(). 
+" - Implement :MarkLoad and :MarkSave commands in mark#LoadCommand() and
+"   mark#SaveCommand(). 
+" - Remove superfluous update autocmd on VimEnter: Persistent marks trigger the
+"   update themselves, same for :Mark commands which could potentially be issued
+"   e.g. in .vimrc. Otherwise, when no marks are defined after startup, the
+"   autosource script isn't even loaded yet, so the autocmd on the VimEnter
+"   event isn't yet defined. 
+"
 " 18-Apr-2011, Ingo Karkat
 " - BUG: Include trailing newline character in check for current mark, so that a
 "   mark that matches the entire line (e.g. created by V<Leader>m) can be
@@ -538,7 +549,7 @@ function! mark#Load( pattern )
 		call mark#UpdateScope()
 
 		" The list of patterns may be sparse, return only the actual patterns. 
-		return len(filter(copy(a:pattern)), '! empty(v:val)')
+		return len(filter(copy(a:pattern), '! empty(v:val)'))
 	endif
 	return 0
 endfunction
@@ -555,6 +566,47 @@ function! mark#ToPatternList()
 	endwhile
 
 	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0:l:highestNonEmptyIndex])
+endfunction
+
+" :MarkLoad command. 
+function! mark#LoadCommand( isSilent )
+	if exists('g:MARK_MARKS')
+		try
+			" Persistent global variables cannot be of type List, so we actually store
+			" the string representation, and eval() it back to a List. 
+			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')'
+			if ! a:isSilent
+				if l:loadedMarkNum == 0
+					echomsg 'No persistent marks found'
+				else
+					echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's'))
+				endif
+			endif
+		catch /^Vim\%((\a\+)\)\=:E/
+			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS'
+			echohl ErrorMsg
+			echomsg v:errmsg
+			echohl None
+
+			unlet! g:MARK_MARKS
+		endtry
+	elseif ! a:isSilent
+		let v:errmsg = 'No persistent marks found'
+		echohl ErrorMsg
+		echomsg v:errmsg
+		echohl None
+	endif
+endfunction
+" :MarkSave command. 
+function! mark#SaveCommand()
+	let l:savedMarks = mark#ToPatternList()
+	let g:MARK_MARKS = string(l:savedMarks)
+	if empty(l:savedMarks)
+		let v:warningmsg = 'No marks defined'
+		echohl WarningMsg
+		echomsg v:warningmsg
+		echohl None
+	endif
 endfunction
 
 
@@ -575,6 +627,7 @@ function! mark#Init()
 	let s:cycle = 0
 	let s:lastSearch = ''
 endfunction
+
 call mark#Init()
 call mark#UpdateScope()
 
