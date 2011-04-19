@@ -13,8 +13,13 @@
 "  - Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher. 
 "  - mark.vim autoload script. 
 " 
-" Version:     2.4.3
+" Version:     2.5.0
 " Changes:
+" 19-Apr-2011, Ingo Karkat
+" - ENH: Add explicit mark persistence via :MarkLoad and :MarkSave commands and
+"   automatic persistence via the g:mwAutoLoadMarks and g:mwAutoSaveMarks
+"   configuration flags. 
+"
 " 15-Apr-2011, Ingo Karkat
 " - Avoid losing the mark highlightings on :syn on or :colorscheme commands.
 "   Thanks to Zhou YiChao for alerting me to this issue and suggesting a fix. 
@@ -228,28 +233,8 @@ endif
 "- commands -------------------------------------------------------------------
 command! -nargs=? Mark call mark#DoMark(<f-args>)
 
-command! -bar -bang MarkLoad
-\	if exists('g:MARK_MARKS') |
-\		execute 'let s:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')' |
-\		if <bang>1 |
-\			if s:loadedMarkNum == 0 |
-\				echomsg 'No persistent marks found' |
-\			else |
-\				echomsg printf('Loaded %d mark%s', s:loadedMarkNum, (s:loadedMarkNum == 1 ? '' : 's')) |
-\			endif |
-\		endif |
-\	elseif <bang>1 |
-\		echoerr 'No persistent marks found' |
-\	endif
-command! -bar MarkSave
-\	let s:savedMarks = mark#ToPatternList() |
-\	let g:MARK_MARKS = string(s:savedMarks) |
-\	if empty(s:savedMarks) |
-\		let v:warningmsg = 'No marks defined' |
-\		echohl WarningMsg |
-\		echomsg v:warningmsg |
-\		echohl None |
-\	endif
+command! -bar MarkLoad call mark#LoadCommand(1)
+command! -bar MarkSave call mark#SaveCommand()
 
 
 "- marks persistence ----------------------------------------------------------
@@ -259,9 +244,10 @@ if g:mwAutoLoadMarks
 	" startup has completed. 
 	augroup MarkInitialization
 		autocmd!
-		" Persistent global variables cannot be of type List, so we actually store
-		" the string representation, and eval() it back to a List. 
-		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') | MarkLoad! | endif
+		" Note: Avoid triggering the autoload unless there actually are persistent
+		" marks. For that, we need to check that g:MARK_MARKS doesn't contain the
+		" empty list representation, and also :execute the :call. 
+		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]' | execute 'call mark#LoadCommand(0)' | endif
 	augroup END
 endif
 
