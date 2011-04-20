@@ -55,7 +55,7 @@ HIGHLIGHTING						   *mark-highlighting*
 {Visual}<Leader>m	Mark or unmark the visual selection. 
 						     *<Leader>r* *v_<Leader>r*
 <Leader>r		Manually input a regular expression to mark. 
-{Visual}<Leader>r	(Based on the visual selection.) 
+{Visual}<Leader>r	Ditto, based on the visual selection. 
 
 			In accordance with the built-in |star| command,
 			all these mappings use 'ignorecase', but not
