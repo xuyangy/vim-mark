@@ -12,6 +12,10 @@
 "
 " Version:     2.5.0
 " Changes:
+" 20-Apr-2011, Ingo Karkat
+" - Extract setting of s:pattern into s:SetPattern() and implement the automatic
+"   persistence there. 
+"
 " 19-Apr-2011, Ingo Karkat
 " - ENH: Add enabling functions for mark persistence: mark#Load() and
 "   mark#ToPatternList(). 
@@ -44,6 +48,8 @@
 "   and make the remaining g:mw... variables script-local, as these contain
 "   internal housekeeping information that does not need to be accessible by the
 "   user. 
+" - Add :MarkSave warning if 'viminfo' doesn't enable global variable
+"   persistence. 
 "
 " 15-Apr-2011, Ingo Karkat
 " - Robustness: Move initialization of w:mwMatch from mark#UpdateMark() to
@@ -228,7 +234,15 @@ function! mark#UpdateScope()
 	execute l:currentWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
 endfunction
+
 " Mark or unmark a regular expression. 
+function! s:SetPattern( index, pattern )
+	let s:pattern[a:index] = a:pattern
+
+	if g:mwAutoSaveMarks
+		call s:SavePattern()
+	endif
+endfunction
 function! mark#DoMark(...) " DoMark(regexp)
 	let regexp = (a:0 ? a:1 : '')
 
@@ -237,8 +251,8 @@ function! mark#DoMark(...) " DoMark(regexp)
 		let i = 0
 		let indices = []
 		while i < s:markNum
-			if !empty(s:pattern[i])
-				let s:pattern[i] = ''
+			if ! empty(s:pattern[i])
+				call s:SetPattern(i, '')
 				call add(indices, i)
 			endif
 			let i += 1
@@ -255,7 +269,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 			if s:lastSearch == s:pattern[i]
 				let s:lastSearch = ''
 			endif
-			let s:pattern[i] = ''
+			call s:SetPattern(i, '')
 			call s:MarkScope([i], '')
 			return
 		endif
@@ -287,7 +301,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 	let i = 0
 	while i < s:markNum
 		if empty(s:pattern[i])
-			let s:pattern[i] = regexp
+			call s:SetPattern(i, regexp)
 			call s:Cycle(i)
 			call s:MarkScope([i], regexp)
 			return
@@ -300,7 +314,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 	if s:lastSearch == s:pattern[i]
 		let s:lastSearch = ''
 	endif
-	let s:pattern[i] = regexp
+	call s:SetPattern(i, regexp)
 	call s:MarkScope([i], regexp)
 endfunction
 " Initialize mark colors in a (new) window. 
@@ -569,13 +583,13 @@ function! mark#ToPatternList()
 endfunction
 
 " :MarkLoad command. 
-function! mark#LoadCommand( isSilent )
+function! mark#LoadCommand( isShowMessages )
 	if exists('g:MARK_MARKS')
 		try
 			" Persistent global variables cannot be of type List, so we actually store
 			" the string representation, and eval() it back to a List. 
 			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')'
-			if ! a:isSilent
+			if a:isShowMessages
 				if l:loadedMarkNum == 0
 					echomsg 'No persistent marks found'
 				else
@@ -590,18 +604,30 @@ function! mark#LoadCommand( isSilent )
 
 			unlet! g:MARK_MARKS
 		endtry
-	elseif ! a:isSilent
+	elseif a:isShowMessages
 		let v:errmsg = 'No persistent marks found'
 		echohl ErrorMsg
 		echomsg v:errmsg
 		echohl None
 	endif
 endfunction
+
 " :MarkSave command. 
-function! mark#SaveCommand()
+function! s:SavePattern()
 	let l:savedMarks = mark#ToPatternList()
 	let g:MARK_MARKS = string(l:savedMarks)
-	if empty(l:savedMarks)
+	return ! empty(l:savedMarks)
+endfunction
+function! mark#SaveCommand()
+	if index(split(&viminfo, ','), '!') == -1
+		let v:errmsg = "Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!"
+		echohl ErrorMsg
+		echomsg v:errmsg
+		echohl None
+		return
+	endif
+
+	if ! s:SavePattern()
 		let v:warningmsg = 'No marks defined'
 		echohl WarningMsg
 		echomsg v:warningmsg
