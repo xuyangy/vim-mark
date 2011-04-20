@@ -15,6 +15,12 @@
 " 
 " Version:     2.5.0
 " Changes:
+" 21-Apr-2011, Ingo Karkat
+" - Expose toggling of mark display (keeping the mark patterns) via new
+"   <Plug>MarkToggle mapping. Offer :MarkClear command as a replacement for the
+"   old argumentless :Mark command, which now just disables, but not clears all
+"   marks. 
+"
 " 19-Apr-2011, Ingo Karkat
 " - ENH: Add explicit mark persistence via :MarkLoad and :MarkSave commands and
 "   automatic persistence via the g:mwAutoLoadMarks and g:mwAutoSaveMarks
@@ -181,7 +187,8 @@ vnoremap <silent> <Plug>MarkSet   <C-\><C-n>:call mark#DoMark(mark#GetVisualSele
 nnoremap <silent> <Plug>MarkRegex :<C-u>call mark#MarkRegex('')<CR>
 vnoremap <silent> <Plug>MarkRegex <C-\><C-n>:call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
 nnoremap <silent> <Plug>MarkClear :<C-u>call mark#DoMark(mark#CurrentMark()[0])<CR>
-nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#DoMark()<CR>
+nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
+nnoremap <silent> <Plug>MarkToggle :<C-u>call mark#Toggle()<CR>
 
 nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>call mark#SearchCurrentMark(0)<CR>
 nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>call mark#SearchCurrentMark(1)<CR>
@@ -209,6 +216,7 @@ if !hasmapto('<Plug>MarkClear', 'n')
 	nmap <unique> <silent> <Leader>n <Plug>MarkClear
 endif
 " No default mapping for <Plug>MarkAllClear. 
+" No default mapping for <Plug>MarkToggle. 
 
 if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
 	nmap <unique> <silent> <Leader>* <Plug>MarkSearchCurrentNext
@@ -232,6 +240,7 @@ endif
 
 "- commands -------------------------------------------------------------------
 command! -nargs=? Mark call mark#DoMark(<f-args>)
+command! -bar MarkClear call mark#ClearAll()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
 command! -bar MarkSave call mark#SaveCommand()
