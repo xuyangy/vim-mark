@@ -18,7 +18,6 @@
 "   regexp, affecting the \n mapping and :Mark. Introduced
 "   s:EnableAndMarkScope() wrapper to correctly handle the highlighting updates
 "   depending on whether marks were previously disabled. 
-" - Implement persistence of s:enable via g:MARK_ENABLED. 
 "
 " 20-Apr-2011, Ingo Karkat
 " - Extract setting of s:pattern into s:SetPattern() and implement the automatic
@@ -604,14 +603,12 @@ function! mark#SearchNext( isBackward )
 endfunction
 
 " Load mark patterns from list. 
-function! mark#Load( pattern, enabled )
+function! mark#Load( pattern )
 	if s:markNum > 0 && len(a:pattern) > 0
 		" Initialize mark patterns with the passed list. Ensure that, regardless of
 		" the list length, s:pattern contains exactly s:markNum elements. 
 		let s:pattern = a:pattern[0:(s:markNum - 1)]
 		let s:pattern += repeat([''], (s:markNum - len(s:pattern)))
-
-		let s:enabled = a:enabled
 
 		call mark#UpdateScope()
 
@@ -641,7 +638,7 @@ function! mark#LoadCommand( isShowMessages )
 		try
 			" Persistent global variables cannot be of type List, so we actually store
 			" the string representation, and eval() it back to a List. 
-			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ', ' . (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1) . ')'
+			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')'
 			if a:isShowMessages
 				if l:loadedMarkNum == 0
 					echomsg 'No persistent marks found'
@@ -650,13 +647,12 @@ function! mark#LoadCommand( isShowMessages )
 				endif
 			endif
 		catch /^Vim\%((\a\+)\)\=:E/
-			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED'
+			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS'
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
 
 			unlet! g:MARK_MARKS
-			unlet! g:MARK_ENABLED
 		endtry
 	elseif a:isShowMessages
 		let v:errmsg = 'No persistent marks found'
@@ -670,7 +666,6 @@ endfunction
 function! s:SavePattern()
 	let l:savedMarks = mark#ToPatternList()
 	let g:MARK_MARKS = string(l:savedMarks)
-	let g:MARK_ENABLED = s:enabled
 	return ! empty(l:savedMarks)
 endfunction
 function! mark#SaveCommand()
