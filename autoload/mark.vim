@@ -18,6 +18,11 @@
 "   regexp, affecting the \n mapping and :Mark. Introduced
 "   s:EnableAndMarkScope() wrapper to correctly handle the highlighting updates
 "   depending on whether marks were previously disabled. 
+" - Implement persistence of s:enable via g:MARK_ENABLED. 
+" - Generalize s:Enable() and combine with intermediate s:Disable() into
+"   s:MarkEnable(), which also performs the persistence of s:enabled. 
+" - Implement lazy-loading of disabled persistent marks via g:mwDoDeferredLoad
+"   flag passed from plugin/mark.vim. 
 "
 " 20-Apr-2011, Ingo Karkat
 " - Extract setting of s:pattern into s:SetPattern() and implement the automatic
@@ -254,30 +259,42 @@ function! mark#UpdateScope()
 	silent! execute l:originalWindowLayout
 endfunction
 
+function! s:MarkEnable( enable, ...)
+	if s:enabled != a:enable
+		" En-/disable marks and perform a full refresh in all windows, unless
+		" explicitly suppressed by passing in 0. 
+		let s:enabled = a:enable
+		if g:mwAutoSaveMarks
+			let g:MARK_ENABLED = s:enabled
+		endif
+		
+		if ! a:0 || ! a:1
+			call mark#UpdateScope()
+		endif
+	endif
+endfunction
 function! s:EnableAndMarkScope( indices, expr )
 	if s:enabled
 		" Marks are already enabled, we just need to push the changes to all
 		" windows. 
 		call s:MarkScope(a:indices, a:expr)
 	else
-		" Enable marks and perform a full refresh in all windows. 
-		let s:enabled = 1
-		call mark#UpdateScope()
-	endif
-endfunction
-function! s:Enable()
-	if ! s:enabled
-		" Enable marks and perform a full refresh in all windows. 
-		let s:enabled = 1
-		call mark#UpdateScope()
+		call s:MarkEnable(1)
 	endif
 endfunction
 
 " Toggle visibility of marks, like :nohlsearch does for the regular search
 " highlighting. 
 function! mark#Toggle()
-	let s:enabled = ! s:enabled
-	call mark#UpdateScope()
+	if s:enabled
+		call s:MarkEnable(0)
+		echo 'Disabled marks'
+	else
+		call s:MarkEnable(1)
+
+		let l:markCnt = len(filter(copy(s:pattern), '! empty(v:val)'))
+		echo 'Enabled' (l:markCnt > 0 ? l:markCnt : '') 'marks'
+	endif
 endfunction
 
 
@@ -300,7 +317,13 @@ function! mark#ClearAll()
 		let i += 1
 	endwhile
 	let s:lastSearch = ''
-	let s:enabled = 1 " Re-enable marks; not strictly necessary, since all marks have just been cleared, and marks will be re-enabled, anyway, when the first mark is added. It's just more consistent for mark persistence. 
+
+" Re-enable marks; not strictly necessary, since all marks have just been
+" cleared, and marks will be re-enabled, anyway, when the first mark is added.
+" It's just more consistent for mark persistence. But save the full refresh, as
+" we do the update ourselves. 
+	call s:MarkEnable(0, 0)
+
 	call s:MarkScope(l:indices, '')
 endfunction
 function! mark#DoMark(...) " DoMark(regexp)
@@ -547,7 +570,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 		" Enable marks (in case they were disabled) after arriving at the mark (to
 		" avoid unnecessary screen updates) but before the error message (to avoid
 		" it getting lost due to the screen updates). 
-		call s:Enable()
+		call s:MarkEnable(1)
 
 		if l:isWrapped
 			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
@@ -567,7 +590,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 		" Enable marks (in case they were disabled) after arriving at the mark (to
 		" avoid unnecessary screen updates) but before the error message (to avoid
 		" it getting lost due to the screen updates). 
-		call s:Enable()
+		call s:MarkEnable(1)
 
 		call s:ErrorMessage(a:searchType, a:pattern, a:isBackward)
 		return 0
@@ -603,12 +626,14 @@ function! mark#SearchNext( isBackward )
 endfunction
 
 " Load mark patterns from list. 
-function! mark#Load( pattern )
+function! mark#Load( pattern, enabled )
 	if s:markNum > 0 && len(a:pattern) > 0
 		" Initialize mark patterns with the passed list. Ensure that, regardless of
 		" the list length, s:pattern contains exactly s:markNum elements. 
 		let s:pattern = a:pattern[0:(s:markNum - 1)]
 		let s:pattern += repeat([''], (s:markNum - len(s:pattern)))
+
+		let s:enabled = a:enabled
 
 		call mark#UpdateScope()
 
@@ -638,7 +663,7 @@ function! mark#LoadCommand( isShowMessages )
 		try
 			" Persistent global variables cannot be of type List, so we actually store
 			" the string representation, and eval() it back to a List. 
-			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ')'
+			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ', ' . (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1) . ')'
 			if a:isShowMessages
 				if l:loadedMarkNum == 0
 					echomsg 'No persistent marks found'
@@ -647,12 +672,13 @@ function! mark#LoadCommand( isShowMessages )
 				endif
 			endif
 		catch /^Vim\%((\a\+)\)\=:E/
-			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS'
+			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED'
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
 
 			unlet! g:MARK_MARKS
+			unlet! g:MARK_ENABLED
 		endtry
 	elseif a:isShowMessages
 		let v:errmsg = 'No persistent marks found'
@@ -666,6 +692,7 @@ endfunction
 function! s:SavePattern()
 	let l:savedMarks = mark#ToPatternList()
 	let g:MARK_MARKS = string(l:savedMarks)
+	let g:MARK_ENABLED = s:enabled
 	return ! empty(l:savedMarks)
 endfunction
 function! mark#SaveCommand()
@@ -706,6 +733,11 @@ function! mark#Init()
 endfunction
 
 call mark#Init()
-call mark#UpdateScope()
+if exists('g:mwDoDeferredLoad') && g:mwDoDeferredLoad
+	unlet g:mwDoDeferredLoad
+	call mark#LoadCommand(0)
+else
+	call mark#UpdateScope()
+endif
 
 " vim: ts=2 sw=2
