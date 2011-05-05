@@ -20,6 +20,8 @@
 "   <Plug>MarkToggle mapping. Offer :MarkClear command as a replacement for the
 "   old argumentless :Mark command, which now just disables, but not clears all
 "   marks. 
+" - Implement lazy-loading of disabled persistent marks via g:mwDoDeferredLoad
+"   flag passing to autoload/mark.vim. 
 "
 " 19-Apr-2011, Ingo Karkat
 " - ENH: Add explicit mark persistence via :MarkLoad and :MarkSave commands and
@@ -251,12 +253,29 @@ if g:mwAutoLoadMarks
 	" As the viminfo is only processed after sourcing of the runtime files, the
 	" persistent global variables are not yet available here. Defer this until Vim
 	" startup has completed. 
+	function! s:AutoLoadMarks()
+		if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]'
+			if ! exists('g:MARK_ENABLED') || g:MARK_ENABLED
+				" There are persistent marks and they haven't been disabled; we need to
+				" show them right now. 
+				call mark#LoadCommand(0)
+			else
+				" Though there are persistent marks, they have been disabled. We avoid
+				" sourcing the autoload script and its invasive autocmds right now;
+				" maybe the marks are never turned on. We just inform the autoload
+				" script that it should do this once it is sourced on-demand by a
+				" mark mapping or command. 
+				let g:mwDoDeferredLoad = 1
+			endif
+		endif
+	endfunction
+
 	augroup MarkInitialization
 		autocmd!
 		" Note: Avoid triggering the autoload unless there actually are persistent
 		" marks. For that, we need to check that g:MARK_MARKS doesn't contain the
 		" empty list representation, and also :execute the :call. 
-		autocmd VimEnter * if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]' | execute 'call mark#LoadCommand(0)' | endif
+		autocmd VimEnter * call <SID>AutoLoadMarks()
 	augroup END
 endif
 
