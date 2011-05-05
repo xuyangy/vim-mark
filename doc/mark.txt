@@ -62,7 +62,8 @@ HIGHLIGHTING						   *mark-highlighting*
 			'smartcase'. 
 								   *<Leader>n*
 <Leader>n		Clear the mark under the cursor.
-			If not on a mark: Clear all marks. 
+			If not on a mark: Disable all marks, similar to
+			|:nohlsearch|. 
 
 			Note: Marks that span multiple lines are not detected,
 			so the use of <Leader>n on such a mark will
@@ -73,7 +74,13 @@ HIGHLIGHTING						   *mark-highlighting*
 :Mark {pattern}		Mark or unmark {pattern}. 
 			For implementation reasons, {pattern} cannot use the
 			'smartcase' setting, only 'ignorecase'. 
-:Mark			Clear all marks. 
+:Mark			Disable all marks, similar to |:nohlsearch|. Marks
+			will automatically re-enable when a mark is added or
+			removed, or a search for marks is performed. 
+								  *:MarkClear*
+:MarkClear		Clear all marks. In contrast to disabling marks, the
+			actual mark information is cleared, the next mark will
+			use the first highlight group. This cannot be undone. 
 
 
 SEARCHING						      *mark-searching*
@@ -166,9 +173,16 @@ To turn off the automatic persistence of marks across Vim sessions:
     let g:mwAutoSaveMarks = 0
 You can still explicitly save marks via |:MarkSave|. 
 
-
+							       *mark-mappings*
 You can use different mappings by mapping to the <Plug>Mark... mappings before
-this plugin is sourced. To remove the default overriding of * and #, use: >
+this plugin is sourced. 
+
+There are no default mappings for enabling/disabling mappings and for the
+:MarkClear command, but you can define some yourself: >
+    nmap <Leader>M <Plug>MarkToggle
+    nmap <Leader>N <Plug>MarkAllClear
+<
+To remove the default overriding of * and #, use: >
     nmap <Plug>IgnoreMarkSearchNext <Plug>MarkSearchNext
     nmap <Plug>IgnoreMarkSearchPrev <Plug>MarkSearchPrev
 <
