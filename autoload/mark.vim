@@ -12,6 +12,9 @@
 "
 " Version:     2.5.0
 " Changes:
+" 06-May-2011, Ingo Karkat
+" - Also print status message on :MarkClear to be consistent with :MarkToggle. 
+"
 " 21-Apr-2011, Ingo Karkat
 " - Implement toggling of mark display (keeping the mark patterns, unlike the
 "   clearing of marks), determined by s:enable. s:DoMark() now toggles on empty
@@ -293,7 +296,7 @@ function! mark#Toggle()
 		call s:MarkEnable(1)
 
 		let l:markCnt = len(filter(copy(s:pattern), '! empty(v:val)'))
-		echo 'Enabled' (l:markCnt > 0 ? l:markCnt : '') 'marks'
+		echo 'Enabled' (l:markCnt > 0 ? l:markCnt . ' ' : '') . 'marks'
 	endif
 endfunction
 
@@ -325,6 +328,12 @@ function! mark#ClearAll()
 	call s:MarkEnable(0, 0)
 
 	call s:MarkScope(l:indices, '')
+
+	if len(indices) > 0
+		echo 'Cleared all' len(indices) 'marks'
+	else
+		echo 'All marks cleared'
+	endif
 endfunction
 function! mark#DoMark(...) " DoMark(regexp)
 	let regexp = (a:0 ? a:1 : '')
