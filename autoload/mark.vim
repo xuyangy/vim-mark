@@ -12,6 +12,11 @@
 "
 " Version:     2.5.1
 " Changes:
+"
+" 17-May-2011, Ingo Karkat
+" - Make s:GetVisualSelection() public to allow use in suggested
+"   <Plug>MarkSpaceIndifferent vmap. 
+"
 " 10-May-2011, Ingo Karkat
 " - Refine :MarkLoad messages: Differentiate between nonexistent and empty
 "   g:MARK_MARKS; add note when marks are disabled. 
@@ -159,7 +164,7 @@ function! mark#MarkCurrentWord()
 	endif
 endfunction
 
-function! s:GetVisualSelection()
+function! mark#GetVisualSelection()
 	let save_clipboard = &clipboard
 	set clipboard= " Avoid clobbering the selection and clipboard registers. 
 	let save_reg = getreg('"')
@@ -171,10 +176,10 @@ function! s:GetVisualSelection()
 	return res
 endfunction
 function! mark#GetVisualSelectionAsLiteralPattern()
-	return s:EscapeText(s:GetVisualSelection())
+	return s:EscapeText(mark#GetVisualSelection())
 endfunction
 function! mark#GetVisualSelectionAsRegexp()
-	return substitute(s:GetVisualSelection(), '\n', '', 'g')
+	return substitute(mark#GetVisualSelection(), '\n', '', 'g')
 endfunction
 
 " Manually input a regular expression. 
