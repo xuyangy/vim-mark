@@ -129,8 +129,23 @@ file. For this to work, the "!" flag must be part of the 'viminfo' setting: >
 			persisted marks if no marks are currently defined) for
 			use in a future Vim session. 
 
-By default, automatic persistence is enabled, so you rarely would need to
-explicitly use these commands unless you turn that off. 
+By default, automatic persistence is enabled (so you don't need to explicitly
+|:MarkSave|), but you have to explicitly load the persisted marks in a new Vim
+session via |:MarkLoad|, to avoid that you accidentally drag along outdated
+highlightings from Vim session to session, and be surprised by the arbitrary
+highlight groups and occasional appearance of forgotten marks. If you want
+just that though and automatically restore any marks, set |g:mwAutoLoadMarks|. 
+
+You can also initialize the marks to static values, e.g. by including this in
+|vimrc|: >
+    runtime plugin/mark.vim
+    silent MarkClear
+    Mark foo
+    Mark bar
+Or you can define custom commands that preset certain marks: >
+    command -bar MyMarks silent MarkClear | execute 'Mark foo' | execute 'Mark bar'
+Or a command that adds to the existing marks and then toggles them: >
+    command -bar ToggleFooBarMarks execute 'Mark foo' | execute 'Mark bar'
 
 ==============================================================================
 INSTALLATION						   *mark-installation*
@@ -138,10 +153,10 @@ INSTALLATION						   *mark-installation*
 This script is packaged as a|vimball|. If you have the "gunzip" decompressor
 in your PATH, simply edit the *.vba.gz package in Vim; otherwise, decompress
 the archive first, e.g. using WinZip. Inside Vim, install by sourcing the
-vimball or via the|:UseVimball|command. >
+vimball or via the |:UseVimball| command. >
     vim mark.vba.gz
     :so %
-To uninstall, use the|:RmVimball|command. 
+To uninstall, use the |:RmVimball| command. 
 
 DEPENDENCIES						   *mark-dependencies*
 
@@ -165,20 +180,19 @@ history; if you don't want that, remove the corresponding symbols from: >
     let g:mwHistAdd = '/@'
 <
 							   *g:mwAutoLoadMarks*
-To turn off the automatic restore of marks from a previous Vim session: >
-    let g:mwAutoLoadMarks = 0
-You can still explicitly load persisted marks via |:MarkLoad|. 
-							   *g:mwAutoSaveMarks*
-To turn off the automatic persistence of marks across Vim sessions: 
+To enable the automatic restore of marks from a previous Vim session: >
+    let g:mwAutoLoadMarks = 1
+<							   *g:mwAutoSaveMarks*
+To turn off the automatic persistence of marks across Vim sessions: >
     let g:mwAutoSaveMarks = 0
 You can still explicitly save marks via |:MarkSave|. 
 
 							       *mark-mappings*
-You can use different mappings by mapping to the <Plug>Mark... mappings before
-this plugin is sourced. 
+You can use different mappings by mapping to the <Plug>Mark... mappings (use
+":map <Plug>Mark" to list them all) before this plugin is sourced. 
 
-There are no default mappings for enabling/disabling mappings and for the
-:MarkClear command, but you can define some yourself: >
+There are no default mappings for toggling all marks and for the |:MarkClear|
+command, but you can define some yourself: >
     nmap <Leader>M <Plug>MarkToggle
     nmap <Leader>N <Plug>MarkAllClear
 <
@@ -204,24 +218,20 @@ IDEAS								  *mark-ideas*
 
 Taken from an alternative implementation at
 http://vim.wikia.com/wiki/Highlight_multiple_words: 
-- Allow to specify the highlight group number via :Mark [n] {regexp}
+- Allow to specify the highlight group number via :[N]Mark {regexp}
 - Use keys 1-9 on the numeric keypad to toggle a highlight group number. 
-- Persist the patterns in a uppercase global variable across Vim sessions.
-  (Request from Mun Johl, 16-Apr-2010.) 
-  Can be somewhat emulated by placing something like this in |vimrc|: >
-    runtime plugin/mark.vim
-    Mark foo
-    Mark bar
-< or defining a custom command a la: >
-    command -bar MyMarks execute "Mark foo" | execute "Mark bar"
 
 ==============================================================================
 HISTORY								*mark-history*
 
-2.5.0	20-Apr-2011
+2.5.0	07-May-2011
 - ENH: Add explicit mark persistence via :MarkLoad and :MarkSave commands and
   automatic persistence via the g:mwAutoLoadMarks and g:mwAutoSaveMarks
-  configuration flags. 
+  configuration flags. (Request from Mun Johl, 16-Apr-2010) 
+- Expose toggling of mark display (keeping the mark patterns) via new
+  <Plug>MarkToggle mapping. Offer :MarkClear command as a replacement for the
+  old argumentless :Mark command, which now just disables, but not clears all
+  marks. 
 
 2.4.4	18-Apr-2011
 - BUG: Include trailing newline character in check for current mark, so that a
