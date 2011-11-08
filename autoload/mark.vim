@@ -541,9 +541,10 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 			" a regular match. The search also must not be retried when this is the
 			" first match, but we've been here before (i.e. l:isMatch is set): This
 			" means that there is only the current mark in the buffer, and we must
-			" break out of the loop and indicate that no other mark was found. 
+			" break out of the loop and indicate that search wrapped around and no
+			" other mark was found. 
 			if l:isMatch
-				let l:line = 0
+				let l:isWrapped = 1
 				break
 			endif
 
@@ -557,6 +558,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 
 			" Note: No need to check 'wrapscan'; the wrapping can only occur if
 			" 'wrapscan' is actually on. 
+echomsg '####' l:count l:line
 			if ! a:isBackward && (l:startLine > l:line || l:startLine == l:line && l:startCol >= l:col)
 				let l:isWrapped = 1
 			elseif a:isBackward && (l:startLine < l:line || l:startLine == l:line && l:startCol <= l:col)
@@ -571,6 +573,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	" We're not stuck when the search wrapped around and landed on the current
 	" mark; that's why we exclude a possible wrap-around via v:count1 == 1. 
 	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && v:count1 == 1)
+echomsg '****' l:line l:isStuckAtCurrentMark l:isWrapped l:isMatch string([l:line, l:col]) string(a:currentMarkPosition)
 	if l:line > 0 && ! l:isStuckAtCurrentMark
 		let l:matchPosition = getpos('.')
 
@@ -612,8 +615,13 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 		" it getting lost due to the screen updates). 
 		call s:MarkEnable(1)
 
-		call s:ErrorMessage(a:searchType, a:pattern, a:isBackward)
-		return 0
+		if l:line > 0 && l:isStuckAtCurrentMark && l:isWrapped
+			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
+			return 1
+		else
+			call s:ErrorMessage(a:searchType, a:pattern, a:isBackward)
+			return 0
+		endif
 	endif
 endfunction
 
