@@ -16,6 +16,8 @@
 " 17-May-2011, Ingo Karkat
 " - Make s:GetVisualSelection() public to allow use in suggested
 "   <Plug>MarkSpaceIndifferent vmap. 
+" - FIX: == comparison in s:DoMark() leads to wrong regexp (\A vs. \a) being
+"   cleared when 'ignorecase' is set. Use case-sensitive comparison ==# instead. 
 "
 " 10-May-2011, Ingo Karkat
 " - Refine :MarkLoad messages: Differentiate between nonexistent and empty
@@ -357,8 +359,8 @@ function! mark#DoMark(...) " DoMark(regexp)
 	" clear the mark if it has been marked
 	let i = 0
 	while i < s:markNum
-		if regexp == s:pattern[i]
-			if s:lastSearch == s:pattern[i]
+		if regexp ==# s:pattern[i]
+			if s:lastSearch ==# s:pattern[i]
 				let s:lastSearch = ''
 			endif
 			call s:SetPattern(i, '')
@@ -403,7 +405,7 @@ function! mark#DoMark(...) " DoMark(regexp)
 
 	" choose a mark group by cycle
 	let i = s:Cycle()
-	if s:lastSearch == s:pattern[i]
+	if s:lastSearch ==# s:pattern[i]
 		let s:lastSearch = ''
 	endif
 	call s:SetPattern(i, regexp)
