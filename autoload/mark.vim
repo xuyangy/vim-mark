@@ -10,8 +10,20 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.5.1
+" Version:     2.5.2
 " Changes:
+"
+" 09-Nov-2011, Ingo Karkat
+" - BUG: With a single match and 'wrapscan' set, a search error was issued
+"   instead of the wrap message. Add check for l:isStuckAtCurrentMark &&
+"   l:isWrapped in the no-match part of s:Search(). 
+" - FIX: In backwards search with single match, the :break short-circuits the
+"   l:isWrapped logic, resets l:line and therefore also confuses the logic and
+"   leads to wrong error message instead of wrap message. Don't reset l:line,
+"   set l:isWrapped instead. 
+" - FIX: Wrong logic for determining l:isWrapped lets wrap-around go undetected
+"   when v:count >= number of total matches. [l:startLine, l:startCol] must
+"   be updated on every iteration. 
 "
 " 17-May-2011, Ingo Karkat
 " - Make s:GetVisualSelection() public to allow use in suggested
@@ -515,11 +527,12 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	set nosmartcase
 
 	let l:count = v:count1
-	let [l:startLine, l:startCol] = [line('.'), col('.')]
 	let l:isWrapped = 0
 	let l:isMatch = 0
 	let l:line = 0
 	while l:count > 0
+		let [l:startLine, l:startCol] = [line('.'), col('.')]
+
 		" Search for next match, 'wrapscan' applies. 
 		let [l:line, l:col] = searchpos( a:pattern, (a:isBackward ? 'b' : '') )
 
@@ -558,7 +571,6 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 
 			" Note: No need to check 'wrapscan'; the wrapping can only occur if
 			" 'wrapscan' is actually on. 
-echomsg '####' l:count l:line
 			if ! a:isBackward && (l:startLine > l:line || l:startLine == l:line && l:startCol >= l:col)
 				let l:isWrapped = 1
 			elseif a:isBackward && (l:startLine < l:line || l:startLine == l:line && l:startCol <= l:col)
@@ -573,7 +585,7 @@ echomsg '####' l:count l:line
 	" We're not stuck when the search wrapped around and landed on the current
 	" mark; that's why we exclude a possible wrap-around via v:count1 == 1. 
 	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && v:count1 == 1)
-echomsg '****' l:line l:isStuckAtCurrentMark l:isWrapped l:isMatch string([l:line, l:col]) string(a:currentMarkPosition)
+"****D echomsg '****' l:line l:isStuckAtCurrentMark l:isWrapped l:isMatch string([l:line, l:col]) string(a:currentMarkPosition)
 	if l:line > 0 && ! l:isStuckAtCurrentMark
 		let l:matchPosition = getpos('.')
 
