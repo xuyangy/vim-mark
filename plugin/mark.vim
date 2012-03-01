@@ -15,6 +15,13 @@
 " 
 " Version:     2.5.0
 " Changes:
+" 06-May-2011, Ingo Karkat
+" - By default, enable g:mwAutoSaveMarks, so that marks are always persisted,
+"   but disable g:mwAutoLoadMarks, so that persisted marks have to be explicitly
+"   loaded, if that is desired. I often wondered why I got unexpected mark
+"   highlightings in a new Vim session until I realized that I had used marks in
+"   a previous session and forgot to clear them. 
+"
 " 21-Apr-2011, Ingo Karkat
 " - Expose toggling of mark display (keeping the mark patterns) via new
 "   <Plug>MarkToggle mapping. Offer :MarkClear command as a replacement for the
@@ -156,7 +163,7 @@ if ! exists('g:mwHistAdd')
 endif
 
 if ! exists('g:mwAutoLoadMarks')
-	let g:mwAutoLoadMarks = 1
+	let g:mwAutoLoadMarks = 0
 endif
 
 if ! exists('g:mwAutoSaveMarks')
