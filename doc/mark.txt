@@ -176,6 +176,9 @@ your vimrc file (or anywhere before this plugin is sourced), in the following
 form (where N = 1..): >
     highlight MarkWordN ctermbg=Cyan ctermfg=Black guibg=#8CCBEA guifg=Black
 Higher numbers always take precedence and are displayed above lower ones. 
+If you want to avoid losing the highlightings on |:colorscheme| commands, you
+need to re-apply your highlights on the |ColorScheme| event, similar to how
+this plugin does. 
 
 The search type highlighting (in the search message) can be changed via: >
     highlight link SearchSpecialSearchType MoreMsg
