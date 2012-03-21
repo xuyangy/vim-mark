@@ -195,11 +195,11 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 
 "- mappings -------------------------------------------------------------------
-nnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSet      :<C-u>call mark#MarkCurrentWord(v:count)<CR>
+vnoremap <silent> <Plug>MarkSet      :<C-u>call mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<CR>
 nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
 vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
-nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, mark#CurrentMark()[0])<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkClear    :<C-u>call mark#DoMark(v:count, mark#CurrentMark()[0])<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
 
@@ -252,7 +252,7 @@ endif
 
 
 "- commands -------------------------------------------------------------------
-command! -count -nargs=? Mark if !mark#DoMark(<count>, <f-args>) | echoerr printf('Only %d mark highlight groups', mark#GetGroupNum()) | endif
+command! -count -nargs=? Mark call mark#DoMark(<count>, <f-args>)
 command! -bar MarkClear call mark#ClearAll()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
@@ -290,4 +290,4 @@ if g:mwAutoLoadMarks
 	augroup END
 endif
 
-" vim: ts=4 sts=0 sw=4 noet
+" vim: ts=4 sw=4
