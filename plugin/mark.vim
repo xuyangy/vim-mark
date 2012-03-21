@@ -1,8 +1,8 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously. 
 "
-" Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2011 by Ingo Karkat
+" Copyright:   (C) 2005-2008 Yuheng Xie
+"              (C) 2008-2012 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'. 
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de> 
@@ -13,8 +13,12 @@
 "  - Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher. 
 "  - mark.vim autoload script. 
 " 
-" Version:     2.5.0
+" Version:     2.5.3
 " Changes:
+" 02-Mar-2012, Philipp Marek
+" - BUG: Version check mistakenly excluded Vim 7.1 versions that do have the
+"   matchadd() function. 
+"
 " 06-May-2011, Ingo Karkat
 " - By default, enable g:mwAutoSaveMarks, so that marks are always persisted,
 "   but disable g:mwAutoLoadMarks, so that persisted marks have to be explicitly
@@ -152,7 +156,7 @@
 "     -> e.g. :Mark Mark.\{-}\ze(
 
 " Avoid installing twice or when in unsupported Vim version. 
-if exists('g:loaded_mark') || (v:version == 701 && ! exists('*matchadd')) || (v:version < 702)
+if exists('g:loaded_mark') || (v:version == 701 && ! exists('*matchadd')) || (v:version < 701)
 	finish
 endif
 let g:loaded_mark = 1
@@ -191,13 +195,13 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 
 "- mappings -------------------------------------------------------------------
-nnoremap <silent> <Plug>MarkSet   :<C-u>call mark#MarkCurrentWord()<CR>
-vnoremap <silent> <Plug>MarkSet   <C-\><C-n>:call mark#DoMark(mark#GetVisualSelectionAsLiteralPattern())<CR>
-nnoremap <silent> <Plug>MarkRegex :<C-u>call mark#MarkRegex('')<CR>
-vnoremap <silent> <Plug>MarkRegex <C-\><C-n>:call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
-nnoremap <silent> <Plug>MarkClear :<C-u>call mark#DoMark(mark#CurrentMark()[0])<CR>
+nnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
+vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
+nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, mark#CurrentMark()[0])<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
-nnoremap <silent> <Plug>MarkToggle :<C-u>call mark#Toggle()<CR>
+nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
 
 nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>call mark#SearchCurrentMark(0)<CR>
 nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>call mark#SearchCurrentMark(1)<CR>
@@ -248,7 +252,7 @@ endif
 
 
 "- commands -------------------------------------------------------------------
-command! -nargs=? Mark call mark#DoMark(<f-args>)
+command! -count -nargs=? Mark if !mark#DoMark(<count>, <f-args>) | echoerr printf('Only %d mark highlight groups', mark#GetGroupNum()) | endif
 command! -bar MarkClear call mark#ClearAll()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
@@ -286,4 +290,4 @@ if g:mwAutoLoadMarks
 	augroup END
 endif
 
-" vim: ts=2 sw=2
+" vim: ts=4 sts=0 sw=4 noet
