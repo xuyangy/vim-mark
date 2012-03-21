@@ -195,13 +195,13 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 
 "- mappings -------------------------------------------------------------------
-nnoremap <silent> <Plug>MarkSet      :<C-u>call mark#MarkCurrentWord(v:count)<CR>
-vnoremap <silent> <Plug>MarkSet      :<C-u>call mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<CR>
-nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
-vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
-nnoremap <silent> <Plug>MarkClear    :<C-u>call mark#DoMark(v:count, mark#CurrentMark()[0])<CR>
+nnoremap <silent> <Plug>MarkSet   :<C-u>call mark#MarkCurrentWord()<CR>
+vnoremap <silent> <Plug>MarkSet   <C-\><C-n>:call mark#DoMark(mark#GetVisualSelectionAsLiteralPattern())<CR>
+nnoremap <silent> <Plug>MarkRegex :<C-u>call mark#MarkRegex('')<CR>
+vnoremap <silent> <Plug>MarkRegex <C-\><C-n>:call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
+nnoremap <silent> <Plug>MarkClear :<C-u>call mark#DoMark(mark#CurrentMark()[0])<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
-nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
+nnoremap <silent> <Plug>MarkToggle :<C-u>call mark#Toggle()<CR>
 
 nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>call mark#SearchCurrentMark(0)<CR>
 nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>call mark#SearchCurrentMark(1)<CR>
@@ -252,7 +252,7 @@ endif
 
 
 "- commands -------------------------------------------------------------------
-command! -count -nargs=? Mark call mark#DoMark(<count>, <f-args>)
+command! -nargs=? Mark call mark#DoMark(<f-args>)
 command! -bar MarkClear call mark#ClearAll()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
@@ -290,4 +290,4 @@ if g:mwAutoLoadMarks
 	augroup END
 endif
 
-" vim: ts=4 sw=4
+" vim: ts=2 sw=2
