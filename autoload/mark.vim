@@ -173,7 +173,10 @@ function! mark#MarkCurrentWord( groupNum )
 			endif
 		endif
 	endif
-	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp))
+
+	if ! empty(l:regexp)
+		call mark#DoMark(a:groupNum, l:regexp)
+	endif
 endfunction
 
 function! mark#GetVisualSelection()
@@ -379,13 +382,14 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
-			return 0
+			return
 		endif
 	endif
 
-	if a:groupNum > s:markNum 
+	if a:groupNum >= s:markNum 
 		" This highlight group does not exist.
-		return 0
+		" TODO: beep or silent
+		return
 	endif
 
 	let regexp = (a:0 ? a:1 : '')
@@ -398,7 +402,7 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			call s:ClearMark(a:groupNum - 1)
 		endif
 
-		return 1
+		return
 	endif
 
 	if a:groupNum == 0
@@ -407,7 +411,7 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 		while i < s:markNum
 			if regexp ==# s:pattern[i]
 				call s:ClearMark(i)
-				return 1
+				return
 			endif
 			let i += 1
 		endwhile
@@ -435,7 +439,7 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			if empty(s:pattern[i])
 				call s:Cycle(i)
 				call s:SetMark(i, regexp)
-				return 1
+				return
 			endif
 			let i += 1
 		endwhile
@@ -448,8 +452,6 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 		" and thereby kept active.
 		call s:SetMark(a:groupNum - 1, regexp, regexp)
 	endif
-
-	return 1
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
@@ -778,10 +780,6 @@ function! mark#SaveCommand()
 		echomsg v:warningmsg
 		echohl None
 	endif
-endfunction
-
-function! mark#GetGroupNum()
-	return s:markNum
 endfunction
 
 
