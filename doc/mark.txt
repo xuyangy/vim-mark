@@ -52,10 +52,18 @@ USAGE								  *mark-usage*
 HIGHLIGHTING						   *mark-highlighting*
 						     *<Leader>m* *v_<Leader>m*
 <Leader>m		Mark the word under the cursor, similar to the |star|
-			command. The next free highlight group is used. 
+			command. The next free highlight group is used.
 			If already on a mark: Clear the mark, like
 			|<Leader>n|. 
 {Visual}<Leader>m	Mark or unmark the visual selection. 
+[N]<Leader>m		With [N], add the word under the cursor to the named
+			highlight group [N]. When that group is not empty, the
+			word is added as an alternative match, so you can
+			highlight multiple words with the same color. When the
+			word is already contained in the list of alternatives,
+			it is removed.
+{Visual}[N]<Leader>m	Same for the visual selection.
+
 						     *<Leader>r* *v_<Leader>r*
 <Leader>r		Manually input a regular expression to mark. 
 {Visual}<Leader>r	Ditto, based on the visual selection. 
@@ -67,14 +75,20 @@ HIGHLIGHTING						   *mark-highlighting*
 <Leader>n		Clear the mark under the cursor.
 			If not on a mark: Disable all marks, similar to
 			|:nohlsearch|. 
-
 			Note: Marks that span multiple lines are not detected,
 			so the use of <Leader>n on such a mark will
 			unintentionally remove all marks! Use
 			{Visual}<Leader>r or :Mark {pattern} to clear
 			multi-line marks. 
+[N]<Leader>n		Clear the marks represented by highlight group
+			[N].
 								       *:Mark*
-:Mark {pattern}		Mark or unmark {pattern}. 
+:[N]Mark		Clear the marks represented by highlight group
+			[N].
+:[N]Mark {pattern}	Mark or unmark {pattern}. Unless [N] is given, the
+			next free highlight group is used. With [N], {pattern}
+			is added as an alternative match for highlight group
+			[N].
 			For implementation reasons, {pattern} cannot use the
 			'smartcase' setting, only 'ignorecase'. 
 :Mark			Disable all marks, similar to |:nohlsearch|. Marks
