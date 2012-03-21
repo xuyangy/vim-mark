@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously. 
 "
 " Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2011 by Ingo Karkat
+"              (C) 2008-2012 by Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'. 
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de> 
@@ -10,8 +10,16 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.5.2
+" Version:     2.6.0
 " Changes:
+"
+" 22-Mar-2012, Ingo Karkat
+" - ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
+"   highlight group [count], and use [count]<Leader>n to clear only highlight
+"   group [count]. This was also requested by Philipp Marek.
+" - FIX: :Mark and <Leader>n actually toggled marks back on when they were
+"   already off. Now, they stay off on multiple invocations. Use :call
+"   mark#Toggle() / <Plug>MarkToggle if you want toggling.
 "
 " 09-Nov-2011, Ingo Karkat
 " - BUG: With a single match and 'wrapscan' set, a search error was issued
@@ -173,10 +181,7 @@ function! mark#MarkCurrentWord( groupNum )
 			endif
 		endif
 	endif
-
-	if ! empty(l:regexp)
-		call mark#DoMark(a:groupNum, l:regexp)
-	endif
+	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp))
 endfunction
 
 function! mark#GetVisualSelection()
@@ -372,7 +377,7 @@ function! s:ClearMark( index )
 	" A last search there is reset.
 	call s:SetMark(a:index, '', '')
 endfunction
-function! mark#DoMark( groupNum, ...) " DoMark(regexp)
+function! mark#DoMark( groupNum, ...)
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
 		call mark#Init()
@@ -382,14 +387,13 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
-			return
+			return 0
 		endif
 	endif
 
-	if a:groupNum >= s:markNum 
+	if a:groupNum > s:markNum 
 		" This highlight group does not exist.
-		" TODO: beep or silent
-		return
+		return 0
 	endif
 
 	let regexp = (a:0 ? a:1 : '')
@@ -402,7 +406,7 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			call s:ClearMark(a:groupNum - 1)
 		endif
 
-		return
+		return 1
 	endif
 
 	if a:groupNum == 0
@@ -411,16 +415,26 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 		while i < s:markNum
 			if regexp ==# s:pattern[i]
 				call s:ClearMark(i)
-				return
+				return 1
 			endif
 			let i += 1
 		endwhile
 	else
-		" Add the pattern as an alternative to the mark represented by the
-		" passed highlight group number.
+		" Add / subtract the pattern as an alternative to the mark represented
+		" by the passed highlight group number.
 		let existingPattern = s:pattern[a:groupNum - 1]
 		if ! empty(existingPattern)
-			let regexp = existingPattern . '\|' . regexp
+			" Split only on \|, but not on \\|.
+			let alternatives = split(existingPattern, '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\|')
+			if index(alternatives, regexp) == -1
+				let regexp = existingPattern . '\|' . regexp
+			else
+				let regexp = join(filter(alternatives, 'v:val !=# regexp'), '\|')
+				if empty(regexp)
+					call s:ClearMark(a:groupNum - 1)
+					return 1
+				endif
+			endif
 		endif
 	endif
 
@@ -439,7 +453,7 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 			if empty(s:pattern[i])
 				call s:Cycle(i)
 				call s:SetMark(i, regexp)
-				return
+				return 1
 			endif
 			let i += 1
 		endwhile
@@ -452,6 +466,8 @@ function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 		" and thereby kept active.
 		call s:SetMark(a:groupNum - 1, regexp, regexp)
 	endif
+
+	return 1
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
@@ -782,6 +798,10 @@ function! mark#SaveCommand()
 	endif
 endfunction
 
+function! mark#GetGroupNum()
+	return s:markNum
+endfunction
+
 
 "- initializations ------------------------------------------------------------
 augroup Mark
@@ -810,4 +830,4 @@ else
 	call mark#UpdateScope()
 endif
 
-" vim: ts=4 sw=4
+" vim: ts=4 sts=0 sw=4 noet
