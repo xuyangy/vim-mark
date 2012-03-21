@@ -23,7 +23,8 @@
 "   set l:isWrapped instead. 
 " - FIX: Wrong logic for determining l:isWrapped lets wrap-around go undetected
 "   when v:count >= number of total matches. [l:startLine, l:startCol] must
-"   be updated on every iteration. 
+"   be updated on every iteration, and should therefore be named [l:prevLine,
+"   l:prevCol]. 
 "
 " 17-May-2011, Ingo Karkat
 " - Make s:GetVisualSelection() public to allow use in suggested
@@ -159,8 +160,8 @@ function! s:EscapeText( text )
 endfunction
 " Mark the current word, like the built-in star command. 
 " If the cursor is on an existing mark, remove it. 
-function! mark#MarkCurrentWord()
-	let l:regexp = mark#CurrentMark()[0]
+function! mark#MarkCurrentWord( groupNum )
+	let l:regexp = (a:groupNum == 0 ? mark#CurrentMark()[0] : '')
 	if empty(l:regexp)
 		let l:cword = expand('<cword>')
 		if ! empty(l:cword)
@@ -172,10 +173,7 @@ function! mark#MarkCurrentWord()
 			endif
 		endif
 	endif
-
-	if ! empty(l:regexp)
-		call mark#DoMark(l:regexp)
-	endif
+	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp))
 endfunction
 
 function! mark#GetVisualSelection()
@@ -204,7 +202,7 @@ function! mark#MarkRegex( regexpPreset )
 	echohl None
 	call inputrestore()
 	if ! empty(l:regexp)
-		call mark#DoMark(l:regexp)
+		call mark#DoMark(0, l:regexp)
 	endif
 endfunction
 
@@ -238,7 +236,7 @@ function! s:MarkMatch( indices, expr )
 		let l:expr = ((&ignorecase && a:expr !~# '\\\@<!\\C') ? '\c' . a:expr : a:expr)
 
 		" To avoid an arbitrary ordering of highlightings, we assign a different
-		" priority based on the highlighting group, and ensure that the highest
+		" priority based on the highlight group, and ensure that the highest
 		" priority is -10, so that we do not override the 'hlsearch' of 0, and still
 		" allow other custom highlightings to sneak in between. 
 		let l:priority = -10 - s:markNum + 1 + l:index
@@ -358,30 +356,20 @@ function! mark#ClearAll()
 		echo 'All marks cleared'
 	endif
 endfunction
-function! mark#DoMark(...) " DoMark(regexp)
-	let regexp = (a:0 ? a:1 : '')
-
-	" Disable marks if regexp is empty. Otherwise, we will be either removing a
-	" mark or adding one, so marks will be re-enabled. 
-	if empty(regexp)
-		call mark#Toggle()
-		return
-	endif
-
-	" clear the mark if it has been marked
-	let i = 0
-	while i < s:markNum
-		if regexp ==# s:pattern[i]
-			if s:lastSearch ==# s:pattern[i]
-				let s:lastSearch = ''
-			endif
-			call s:SetPattern(i, '')
-			call s:EnableAndMarkScope([i], '')
-			return
+function! s:SetMark( index, regexp, ... )
+	if a:0
+		if s:lastSearch ==# s:pattern[a:index]
+			let s:lastSearch = a:1
 		endif
-		let i += 1
-	endwhile
-
+	endif
+	call s:SetPattern(a:index, a:regexp)
+	call s:EnableAndMarkScope([a:index], a:regexp)
+endfunction
+function! s:ClearMark( index )
+	" A last search there is reset.
+	call s:SetMark(a:index, '', '')
+endfunction
+function! mark#DoMark( groupNum, ...) " DoMark(regexp)
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
 		call mark#Init()
@@ -391,7 +379,44 @@ function! mark#DoMark(...) " DoMark(regexp)
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
-			return
+			return 0
+		endif
+	endif
+
+	if a:groupNum > s:markNum 
+		" This highlight group does not exist.
+		return 0
+	endif
+
+	let regexp = (a:0 ? a:1 : '')
+	if empty(regexp)
+		if a:groupNum == 0
+			" Disable all marks. 
+			call s:MarkEnable(0)
+		else
+			" Clear the mark represented by the passed highlight group number.
+			call s:ClearMark(a:groupNum - 1)
+		endif
+
+		return 1
+	endif
+
+	if a:groupNum == 0
+		" Clear the mark if it has been marked.
+		let i = 0
+		while i < s:markNum
+			if regexp ==# s:pattern[i]
+				call s:ClearMark(i)
+				return 1
+			endif
+			let i += 1
+		endwhile
+	else
+		" Add the pattern as an alternative to the mark represented by the
+		" passed highlight group number.
+		let existingPattern = s:pattern[a:groupNum - 1]
+		if ! empty(existingPattern)
+			let regexp = existingPattern . '\|' . regexp
 		endif
 	endif
 
@@ -403,25 +428,28 @@ function! mark#DoMark(...) " DoMark(regexp)
 		call histadd('@', regexp)
 	endif
 
-	" choose an unused mark group
-	let i = 0
-	while i < s:markNum
-		if empty(s:pattern[i])
-			call s:SetPattern(i, regexp)
-			call s:Cycle(i)
-			call s:EnableAndMarkScope([i], regexp)
-			return
-		endif
-		let i += 1
-	endwhile
+	if a:groupNum == 0
+		" Choose an unused highlight group. The last search is kept untouched.
+		let i = 0
+		while i < s:markNum
+			if empty(s:pattern[i])
+				call s:Cycle(i)
+				call s:SetMark(i, regexp)
+				return 1
+			endif
+			let i += 1
+		endwhile
 
-	" choose a mark group by cycle
-	let i = s:Cycle()
-	if s:lastSearch ==# s:pattern[i]
-		let s:lastSearch = ''
+		" Choose a highlight group by cycle. A last search there is reset.
+		let i = s:Cycle()
+		call s:SetMark(i, regexp, '')
+	else
+		" Use and extend the passed highlight group. A last search is updated
+		" and thereby kept active.
+		call s:SetMark(a:groupNum - 1, regexp, regexp)
 	endif
-	call s:SetPattern(i, regexp)
-	call s:EnableAndMarkScope([i], regexp)
+
+	return 1
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
@@ -434,7 +462,7 @@ function! mark#CurrentMark()
 	" Highlighting groups with higher numbers take precedence over lower numbers,
 	" and therefore its marks appear "above" other marks. To retrieve the visible
 	" mark in case of overlapping marks, we need to check from highest to lowest
-	" highlighting group. 
+	" highlight group. 
 	let i = s:markNum - 1
 	while i >= 0
 		if ! empty(s:pattern[i])
@@ -531,7 +559,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	let l:isMatch = 0
 	let l:line = 0
 	while l:count > 0
-		let [l:startLine, l:startCol] = [line('.'), col('.')]
+		let [l:prevLine, l:prevCol] = [line('.'), col('.')]
 
 		" Search for next match, 'wrapscan' applies. 
 		let [l:line, l:col] = searchpos( a:pattern, (a:isBackward ? 'b' : '') )
@@ -571,9 +599,9 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 
 			" Note: No need to check 'wrapscan'; the wrapping can only occur if
 			" 'wrapscan' is actually on. 
-			if ! a:isBackward && (l:startLine > l:line || l:startLine == l:line && l:startCol >= l:col)
+			if ! a:isBackward && (l:prevLine > l:line || l:prevLine == l:line && l:prevCol >= l:col)
 				let l:isWrapped = 1
-			elseif a:isBackward && (l:startLine < l:line || l:startLine == l:line && l:startCol <= l:col)
+			elseif a:isBackward && (l:prevLine < l:line || l:prevLine == l:line && l:prevCol <= l:col)
 				let l:isWrapped = 1
 			endif
 		else
@@ -752,6 +780,10 @@ function! mark#SaveCommand()
 	endif
 endfunction
 
+function! mark#GetGroupNum()
+	return s:markNum
+endfunction
+
 
 "- initializations ------------------------------------------------------------
 augroup Mark
@@ -780,4 +812,4 @@ else
 	call mark#UpdateScope()
 endif
 
-" vim: ts=2 sw=2
+" vim: ts=4 sw=4
