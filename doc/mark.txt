@@ -252,6 +252,10 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 ==============================================================================
 HISTORY								*mark-history*
 
+2.5.3	02-Mar-2012
+- BUG: Version check mistakenly excluded Vim 7.1 versions that do have the
+  matchadd() function. Thanks to Philipp Marek for sending a patch. 
+
 2.5.2	09-Nov-2011
 Fixed various problems with wrap-around warnings: 
 - BUG: With a single match and 'wrapscan' set, a search error was issued. 
@@ -400,8 +404,8 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org. 
 
 ==============================================================================
-Copyright: (C) 2005-2008 by Yuheng Xie
-           (C) 2008-2011 by Ingo Karkat
+Copyright: (C) 2005-2008 Yuheng Xie
+           (C) 2008-2012 Ingo Karkat
 The VIM LICENSE applies to this script; see|copyright|. 
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
