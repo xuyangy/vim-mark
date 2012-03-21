@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously. 
 "
 " Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2012 by Ingo Karkat
+"              (C) 2008-2011 by Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'. 
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de> 
@@ -10,16 +10,8 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages). 
 "
-" Version:     2.6.0
+" Version:     2.5.2
 " Changes:
-"
-" 22-Mar-2012, Ingo Karkat
-" - ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
-"   highlight group [count], and use [count]<Leader>n to clear only highlight
-"   group [count]. This was also requested by Philipp Marek.
-" - FIX: :Mark and <Leader>n actually toggled marks back on when they were
-"   already off. Now, they stay off on multiple invocations. Use :call
-"   mark#Toggle() / <Plug>MarkToggle if you want toggling.
 "
 " 09-Nov-2011, Ingo Karkat
 " - BUG: With a single match and 'wrapscan' set, a search error was issued
@@ -168,8 +160,8 @@ function! s:EscapeText( text )
 endfunction
 " Mark the current word, like the built-in star command. 
 " If the cursor is on an existing mark, remove it. 
-function! mark#MarkCurrentWord( groupNum )
-	let l:regexp = (a:groupNum == 0 ? mark#CurrentMark()[0] : '')
+function! mark#MarkCurrentWord()
+	let l:regexp = mark#CurrentMark()[0]
 	if empty(l:regexp)
 		let l:cword = expand('<cword>')
 		if ! empty(l:cword)
@@ -181,7 +173,10 @@ function! mark#MarkCurrentWord( groupNum )
 			endif
 		endif
 	endif
-	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp))
+
+	if ! empty(l:regexp)
+		call mark#DoMark(l:regexp)
+	endif
 endfunction
 
 function! mark#GetVisualSelection()
@@ -210,7 +205,7 @@ function! mark#MarkRegex( regexpPreset )
 	echohl None
 	call inputrestore()
 	if ! empty(l:regexp)
-		call mark#DoMark(0, l:regexp)
+		call mark#DoMark(l:regexp)
 	endif
 endfunction
 
@@ -244,7 +239,7 @@ function! s:MarkMatch( indices, expr )
 		let l:expr = ((&ignorecase && a:expr !~# '\\\@<!\\C') ? '\c' . a:expr : a:expr)
 
 		" To avoid an arbitrary ordering of highlightings, we assign a different
-		" priority based on the highlight group, and ensure that the highest
+		" priority based on the highlighting group, and ensure that the highest
 		" priority is -10, so that we do not override the 'hlsearch' of 0, and still
 		" allow other custom highlightings to sneak in between. 
 		let l:priority = -10 - s:markNum + 1 + l:index
@@ -364,20 +359,30 @@ function! mark#ClearAll()
 		echo 'All marks cleared'
 	endif
 endfunction
-function! s:SetMark( index, regexp, ... )
-	if a:0
-		if s:lastSearch ==# s:pattern[a:index]
-			let s:lastSearch = a:1
-		endif
+function! mark#DoMark(...) " DoMark(regexp)
+	let regexp = (a:0 ? a:1 : '')
+
+	" Disable marks if regexp is empty. Otherwise, we will be either removing a
+	" mark or adding one, so marks will be re-enabled. 
+	if empty(regexp)
+		call mark#Toggle()
+		return
 	endif
-	call s:SetPattern(a:index, a:regexp)
-	call s:EnableAndMarkScope([a:index], a:regexp)
-endfunction
-function! s:ClearMark( index )
-	" A last search there is reset.
-	call s:SetMark(a:index, '', '')
-endfunction
-function! mark#DoMark( groupNum, ...)
+
+	" clear the mark if it has been marked
+	let i = 0
+	while i < s:markNum
+		if regexp ==# s:pattern[i]
+			if s:lastSearch ==# s:pattern[i]
+				let s:lastSearch = ''
+			endif
+			call s:SetPattern(i, '')
+			call s:EnableAndMarkScope([i], '')
+			return
+		endif
+		let i += 1
+	endwhile
+
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again. 
 		call mark#Init()
@@ -387,54 +392,7 @@ function! mark#DoMark( groupNum, ...)
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
-			return 0
-		endif
-	endif
-
-	if a:groupNum > s:markNum 
-		" This highlight group does not exist.
-		return 0
-	endif
-
-	let regexp = (a:0 ? a:1 : '')
-	if empty(regexp)
-		if a:groupNum == 0
-			" Disable all marks. 
-			call s:MarkEnable(0)
-		else
-			" Clear the mark represented by the passed highlight group number.
-			call s:ClearMark(a:groupNum - 1)
-		endif
-
-		return 1
-	endif
-
-	if a:groupNum == 0
-		" Clear the mark if it has been marked.
-		let i = 0
-		while i < s:markNum
-			if regexp ==# s:pattern[i]
-				call s:ClearMark(i)
-				return 1
-			endif
-			let i += 1
-		endwhile
-	else
-		" Add / subtract the pattern as an alternative to the mark represented
-		" by the passed highlight group number.
-		let existingPattern = s:pattern[a:groupNum - 1]
-		if ! empty(existingPattern)
-			" Split only on \|, but not on \\|.
-			let alternatives = split(existingPattern, '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\|')
-			if index(alternatives, regexp) == -1
-				let regexp = existingPattern . '\|' . regexp
-			else
-				let regexp = join(filter(alternatives, 'v:val !=# regexp'), '\|')
-				if empty(regexp)
-					call s:ClearMark(a:groupNum - 1)
-					return 1
-				endif
-			endif
+			return
 		endif
 	endif
 
@@ -446,28 +404,25 @@ function! mark#DoMark( groupNum, ...)
 		call histadd('@', regexp)
 	endif
 
-	if a:groupNum == 0
-		" Choose an unused highlight group. The last search is kept untouched.
-		let i = 0
-		while i < s:markNum
-			if empty(s:pattern[i])
-				call s:Cycle(i)
-				call s:SetMark(i, regexp)
-				return 1
-			endif
-			let i += 1
-		endwhile
+	" choose an unused mark group
+	let i = 0
+	while i < s:markNum
+		if empty(s:pattern[i])
+			call s:SetPattern(i, regexp)
+			call s:Cycle(i)
+			call s:EnableAndMarkScope([i], regexp)
+			return
+		endif
+		let i += 1
+	endwhile
 
-		" Choose a highlight group by cycle. A last search there is reset.
-		let i = s:Cycle()
-		call s:SetMark(i, regexp, '')
-	else
-		" Use and extend the passed highlight group. A last search is updated
-		" and thereby kept active.
-		call s:SetMark(a:groupNum - 1, regexp, regexp)
+	" choose a mark group by cycle
+	let i = s:Cycle()
+	if s:lastSearch ==# s:pattern[i]
+		let s:lastSearch = ''
 	endif
-
-	return 1
+	call s:SetPattern(i, regexp)
+	call s:EnableAndMarkScope([i], regexp)
 endfunction
 
 " Return [mark text, mark start position] of the mark under the cursor (or
@@ -480,7 +435,7 @@ function! mark#CurrentMark()
 	" Highlighting groups with higher numbers take precedence over lower numbers,
 	" and therefore its marks appear "above" other marks. To retrieve the visible
 	" mark in case of overlapping marks, we need to check from highest to lowest
-	" highlight group. 
+	" highlighting group. 
 	let i = s:markNum - 1
 	while i >= 0
 		if ! empty(s:pattern[i])
@@ -798,10 +753,6 @@ function! mark#SaveCommand()
 	endif
 endfunction
 
-function! mark#GetGroupNum()
-	return s:markNum
-endfunction
-
 
 "- initializations ------------------------------------------------------------
 augroup Mark
@@ -830,4 +781,4 @@ else
 	call mark#UpdateScope()
 endif
 
-" vim: ts=4 sts=0 sw=4 noet
+" vim: ts=2 sw=2
