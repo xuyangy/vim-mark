@@ -16,6 +16,7 @@
 " - ENH: Add :MarkInfo command that prints all mark highlight groups and their
 "   search patterns, plus information about the current search mark, next mark
 "   group, and whether marks are disabled.
+" - ENH: Show which mark group a pattern was set / added / removed / cleared.
 "
 " 22-Mar-2012, Ingo Karkat
 " - ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
@@ -167,6 +168,37 @@
 " - Split off functions into autoload script.
 
 "- functions ------------------------------------------------------------------
+
+silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.
+if exists('*SearchSpecial#WrapMessage')
+	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
+		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
+	endfunction
+	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
+		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
+	endfunction
+else
+	function! s:Trim( message )
+		" Limit length to avoid "Hit ENTER" prompt.
+		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
+	endfunction
+	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
+		let v:warningmsg = printf('%s search hit %s, continuing at %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), (a:isBackward ? 'BOTTOM' : 'TOP'))
+		echohl WarningMsg
+		echo s:Trim(v:warningmsg)
+		echohl None
+	endfunction
+	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
+		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
+		echohl SearchSpecialSearchType
+		echo a:searchType
+		echohl None
+		echon s:Trim(l:message)
+	endfunction
+endif
+
 function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
@@ -391,6 +423,18 @@ function! s:ClearMark( index )
 	" A last search there is reset.
 	call s:SetMark(a:index, '', '')
 endfunction
+function! s:EchoMark( groupNum, regexp )
+	call s:EchoSearchPattern('mark-' . a:groupNum, a:regexp, 0)
+endfunction
+function! s:EchoMarkCleared( groupNum )
+	echohl SearchSpecialSearchType
+	echo 'mark-' . a:groupNum
+	echohl None
+	echon ' cleared'
+endfunction
+function! s:EchoMarksDisabled()
+	echo 'All marks disabled'
+endfunction
 function! mark#DoMark( groupNum, ...)
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again.
@@ -415,9 +459,11 @@ function! mark#DoMark( groupNum, ...)
 		if a:groupNum == 0
 			" Disable all marks.
 			call s:MarkEnable(0)
+			call s:EchoMarksDisabled()
 		else
 			" Clear the mark represented by the passed highlight group number.
 			call s:ClearMark(a:groupNum - 1)
+			call s:EchoMarkCleared(a:groupNum)
 		endif
 
 		return 1
@@ -429,6 +475,7 @@ function! mark#DoMark( groupNum, ...)
 		while i < s:markNum
 			if regexp ==# s:pattern[i]
 				call s:ClearMark(i)
+				call s:EchoMarkCleared(i + 1)
 				return 1
 			endif
 			let i += 1
@@ -446,6 +493,7 @@ function! mark#DoMark( groupNum, ...)
 				let regexp = join(filter(alternatives, 'v:val !=# regexp'), '\|')
 				if empty(regexp)
 					call s:ClearMark(a:groupNum - 1)
+					call s:EchoMarkCleared(a:groupNum)
 					return 1
 				endif
 			endif
@@ -478,8 +526,7 @@ function! mark#DoMark( groupNum, ...)
 		call s:SetMark(i, regexp, regexp)
 	endif
 
-	call s:EchoSearchPattern('mark-' . (i + 1), regexp, 0)
-
+	call s:EchoMark(i + 1, regexp)
 	return 1
 endfunction
 
@@ -532,35 +579,6 @@ function! mark#SearchCurrentMark( isBackward )
 	endif
 endfunction
 
-silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.
-if exists('*SearchSpecial#WrapMessage')
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		redraw
-		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-else
-	function! s:Trim( message )
-		" Limit length to avoid "Hit ENTER" prompt.
-		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
-	endfunction
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		redraw
-		let v:warningmsg = printf('%s search hit %s, continuing at %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), (a:isBackward ? 'BOTTOM' : 'TOP'))
-		echohl WarningMsg
-		echo s:Trim(v:warningmsg)
-		echohl None
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
-		echohl SearchSpecialSearchType
-		echo a:searchType
-		echohl None
-		echon s:Trim(l:message)
-	endfunction
-endif
 function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	if &wrapscan
 		let v:errmsg = a:searchType . ' not found: ' . a:searchPattern
