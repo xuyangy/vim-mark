@@ -16,10 +16,6 @@
 " - ENH: Add :MarkInfo command that prints all mark highlight groups and their
 "   search patterns, plus information about the current search mark, next mark
 "   group, and whether marks are disabled.
-" - ENH: Show which mark group a pattern was set / added / removed / cleared.
-" - Refactoring: Store index into s:pattern instead of pattern itself in
-"   s:lastSearch. For that, mark#CurrentMark() now additionally returns the
-"   index.
 "
 " 22-Mar-2012, Ingo Karkat
 " - ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
@@ -171,37 +167,6 @@
 " - Split off functions into autoload script.
 
 "- functions ------------------------------------------------------------------
-
-silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.
-if exists('*SearchSpecial#WrapMessage')
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		redraw
-		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
-	endfunction
-else
-	function! s:Trim( message )
-		" Limit length to avoid "Hit ENTER" prompt.
-		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
-	endfunction
-	function! s:WrapMessage( searchType, searchPattern, isBackward )
-		redraw
-		let v:warningmsg = printf('%s search hit %s, continuing at %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), (a:isBackward ? 'BOTTOM' : 'TOP'))
-		echohl WarningMsg
-		echo s:Trim(v:warningmsg)
-		echohl None
-	endfunction
-	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
-		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
-		echohl SearchSpecialSearchType
-		echo a:searchType
-		echohl None
-		echon s:Trim(l:message)
-	endfunction
-endif
-
 function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
@@ -397,7 +362,7 @@ function! mark#ClearAll()
 		endif
 		let i += 1
 	endwhile
-	let s:lastSearch = -1
+	let s:lastSearch = ''
 
 " Re-enable marks; not strictly necessary, since all marks have just been
 " cleared, and marks will be re-enabled, anyway, when the first mark is added.
@@ -415,7 +380,7 @@ function! mark#ClearAll()
 endfunction
 function! s:SetMark( index, regexp, ... )
 	if a:0
-		if s:lastSearch == a:index
+		if s:lastSearch ==# s:pattern[a:index]
 			let s:lastSearch = a:1
 		endif
 	endif
@@ -424,19 +389,7 @@ function! s:SetMark( index, regexp, ... )
 endfunction
 function! s:ClearMark( index )
 	" A last search there is reset.
-	call s:SetMark(a:index, '', -1)
-endfunction
-function! s:EchoMark( groupNum, regexp )
-	call s:EchoSearchPattern('mark-' . a:groupNum, a:regexp, 0)
-endfunction
-function! s:EchoMarkCleared( groupNum )
-	echohl SearchSpecialSearchType
-	echo 'mark-' . a:groupNum
-	echohl None
-	echon ' cleared'
-endfunction
-function! s:EchoMarksDisabled()
-	echo 'All marks disabled'
+	call s:SetMark(a:index, '', '')
 endfunction
 function! mark#DoMark( groupNum, ...)
 	if s:markNum <= 0
@@ -462,11 +415,9 @@ function! mark#DoMark( groupNum, ...)
 		if a:groupNum == 0
 			" Disable all marks.
 			call s:MarkEnable(0)
-			call s:EchoMarksDisabled()
 		else
 			" Clear the mark represented by the passed highlight group number.
 			call s:ClearMark(a:groupNum - 1)
-			call s:EchoMarkCleared(a:groupNum)
 		endif
 
 		return 1
@@ -478,7 +429,6 @@ function! mark#DoMark( groupNum, ...)
 		while i < s:markNum
 			if regexp ==# s:pattern[i]
 				call s:ClearMark(i)
-				call s:EchoMarkCleared(i + 1)
 				return 1
 			endif
 			let i += 1
@@ -496,7 +446,6 @@ function! mark#DoMark( groupNum, ...)
 				let regexp = join(filter(alternatives, 'v:val !=# regexp'), '\|')
 				if empty(regexp)
 					call s:ClearMark(a:groupNum - 1)
-					call s:EchoMarkCleared(a:groupNum)
 					return 1
 				endif
 			endif
@@ -520,21 +469,19 @@ function! mark#DoMark( groupNum, ...)
 		else
 			" Choose a highlight group by cycle. A last search there is reset.
 			let i = s:Cycle()
-			call s:SetMark(i, regexp, -1)
+			call s:SetMark(i, regexp, '')
 		endif
 	else
-		let i = a:groupNum - 1
 		" Use and extend the passed highlight group. A last search is updated
 		" and thereby kept active.
-		call s:SetMark(i, regexp, i)
+		call s:SetMark(a:groupNum - 1, regexp, regexp)
 	endif
 
-	call s:EchoMark(i + 1, regexp)
 	return 1
 endfunction
 
-" Return [mark text, mark start position, mark index] of the mark under the
-" cursor (or ['', [], -1] if there is no mark).
+" Return [mark text, mark start position] of the mark under the cursor (or
+" ['', []] if there is no mark).
 " The mark can include the trailing newline character that concludes the line,
 " but marks that span multiple lines are not supported.
 function! mark#CurrentMark()
@@ -553,7 +500,7 @@ function! mark#CurrentMark()
 				let b = match(line, s:pattern[i], start)
 				let e = matchend(line, s:pattern[i], start)
 				if b < col('.') && col('.') <= e
-					return [s:pattern[i], [line('.'), (b + 1)], i]
+					return [s:pattern[i], [line('.'), (b + 1)]]
 				endif
 				if b == e
 					break
@@ -563,25 +510,54 @@ function! mark#CurrentMark()
 		endif
 		let i -= 1
 	endwhile
-	return ['', [], -1]
+	return ['', []]
 endfunction
 
 " Search current mark.
 function! mark#SearchCurrentMark( isBackward )
-	let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+	let [l:markText, l:markPosition] = mark#CurrentMark()
 	if empty(l:markText)
-		if s:lastSearch == -1
+		if empty(s:lastSearch)
 			call mark#SearchAnyMark(a:isBackward)
-			let s:lastSearch = mark#CurrentMark()[2]
+			let s:lastSearch = mark#CurrentMark()[0]
 		else
-			call s:Search(s:pattern[s:lastSearch], a:isBackward, [], 'same-mark')
+			call s:Search(s:lastSearch, a:isBackward, [], 'same-mark')
 		endif
 	else
-		call s:Search(l:markText, a:isBackward, l:markPosition, (l:markIndex ==# s:lastSearch ? 'same-mark' : 'new-mark'))
-		let s:lastSearch = l:markIndex
+		call s:Search(l:markText, a:isBackward, l:markPosition, (l:markText ==# s:lastSearch ? 'same-mark' : 'new-mark'))
+		let s:lastSearch = l:markText
 	endif
 endfunction
 
+silent! call SearchSpecial#DoesNotExist()	" Execute a function to force autoload.
+if exists('*SearchSpecial#WrapMessage')
+	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
+		call SearchSpecial#WrapMessage(a:searchType, a:searchPattern, a:isBackward)
+	endfunction
+	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
+		call SearchSpecial#EchoSearchPattern(a:searchType, a:searchPattern, a:isBackward)
+	endfunction
+else
+	function! s:Trim( message )
+		" Limit length to avoid "Hit ENTER" prompt.
+		return strpart(a:message, 0, (&columns / 2)) . (len(a:message) > (&columns / 2) ? "..." : "")
+	endfunction
+	function! s:WrapMessage( searchType, searchPattern, isBackward )
+		redraw
+		let v:warningmsg = printf('%s search hit %s, continuing at %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), (a:isBackward ? 'BOTTOM' : 'TOP'))
+		echohl WarningMsg
+		echo s:Trim(v:warningmsg)
+		echohl None
+	endfunction
+	function! s:EchoSearchPattern( searchType, searchPattern, isBackward )
+		let l:message = (a:isBackward ? '?' : '/') .  a:searchPattern
+		echohl SearchSpecialSearchType
+		echo a:searchType
+		echohl None
+		echon s:Trim(l:message)
+	endfunction
+endif
 function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	if &wrapscan
 		let v:errmsg = a:searchType . ' not found: ' . a:searchPattern
@@ -727,7 +703,7 @@ function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
 	call s:Search(l:markText, a:isBackward, l:markPosition, 'any-mark')
-	let s:lastSearch = -1
+	let s:lastSearch = ""
 endfunction
 
 " Search last searched mark.
@@ -736,7 +712,7 @@ function! mark#SearchNext( isBackward )
 	if empty(l:markText)
 		return 0
 	else
-		if s:lastSearch == -1
+		if empty(s:lastSearch)
 			call mark#SearchAnyMark(a:isBackward)
 		else
 			call mark#SearchCurrentMark(a:isBackward)
@@ -846,7 +822,7 @@ function! mark#Info()
 	for i in range(s:markNum)
 		execute 'echohl MarkWord' . (i + 1)
 		let l:marker = ''
-		if s:lastSearch == i
+		if ! empty(s:lastSearch) && s:lastSearch ==# s:pattern[i]
 			let l:marker .= '*'
 		endif
 		if i == l:nextGroupNum
@@ -882,7 +858,7 @@ function! mark#Init()
 	endwhile
 	let s:pattern = repeat([''], s:markNum)
 	let s:cycle = 0
-	let s:lastSearch = -1
+	let s:lastSearch = ''
 	let s:enabled = 1
 endfunction
 
