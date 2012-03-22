@@ -169,22 +169,6 @@ Or you can define custom commands that preset certain marks: >
     command -bar MyMarks silent MarkClear | execute '5Mark foo' | execute '6Mark bar'
 Or a command that adds to the existing marks and then toggles them: >
     command -bar ToggleFooBarMarks execute 'Mark foo' | execute 'Mark bar'
-<
-MARK INFORMATION					    *mark-information*
-
-Both |mark-highlighting| and |mark-searching| commands print information about
-the mark and search pattern, e.g.
-	mark-1/\<pattern\> ~
-This is especially useful when you want to add or subtract patterns to a mark
-highlight group via [N].
-
-								   *:MarkInfo*
-:MarkInfo		List all mark highlight groups and the search patterns
-			defined for them.
-			The group that will be used for the next |:Mark| or
-			|<Leader>m| command (with [N]) is shown with a "+".
-			The last mark used for a search (via |<Leader>*|) is
-			shown with a "*".
 
 ==============================================================================
 INSTALLATION						   *mark-installation*
