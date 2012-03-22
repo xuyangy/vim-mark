@@ -472,10 +472,13 @@ function! mark#DoMark( groupNum, ...)
 			call s:SetMark(i, regexp, '')
 		endif
 	else
+		let i = a:groupNum - 1
 		" Use and extend the passed highlight group. A last search is updated
 		" and thereby kept active.
-		call s:SetMark(a:groupNum - 1, regexp, regexp)
+		call s:SetMark(i, regexp, regexp)
 	endif
+
+	call s:EchoSearchPattern('mark-' . (i + 1), regexp, 0)
 
 	return 1
 endfunction
