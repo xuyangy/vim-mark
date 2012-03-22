@@ -13,7 +13,7 @@
 " Version:     2.6.1
 " Changes:
 " 23-Mar-2012, Ingo Karkat
-" - ENH: Add :Marks command that prints all mark highlight groups and their
+" - ENH: Add :MarkInfo command that prints all mark highlight groups and their
 "   search patterns, plus information about the current search mark, next mark
 "   group, and whether marks are disabled.
 " - ENH: Show which mark group a pattern was set / added / removed / cleared.
@@ -835,8 +835,8 @@ function! mark#SaveCommand()
 	endif
 endfunction
 
-" :Marks command.
-function! mark#List()
+" :MarkInfo command.
+function! mark#Info()
 	let l:nextGroupNum = s:FreeGroup()
 	if l:nextGroupNum == -1
 		let l:nextGroupNum = s:cycle
