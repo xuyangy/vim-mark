@@ -19,6 +19,10 @@
 " - ENH: Add :MarkInfo command that prints all mark highlight groups and their
 "   search patterns, plus information about the current search mark, next mark
 "   group, and whether marks are disabled.
+" - FIX: When the cursor is positioned on the current mark, [N]<Leader>n /
+"   <Plug>MarkClear with [N] appended the pattern for the current mark (again
+"   and again) instead of clearing it. Must not pass current mark pattern when
+"   [N] is given.
 "
 " 22-Mar-2012, Ingo Karkat
 " - ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
@@ -209,7 +213,7 @@ nnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#MarkCurrentWord(v:count)<Bar
 vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
 vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
-nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, mark#CurrentMark()[0])<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
 
