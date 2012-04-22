@@ -240,8 +240,13 @@ vimrc file (or anywhere before this plugin is sourced), in the following form
 You can also use this form to redefine only some of the default highlightings.
 If you want to avoid losing the highlightings on |:colorscheme| commands, you
 need to re-apply your highlights on the |ColorScheme| event, similar to how
-this plugin does.
-
+this plugin does. Or you define the palette not via :highlight commands, but
+use the plugin's infrastructure: >
+    let g:mwDefaultHighlightingPalette = [
+    \	{ 'ctermbg':'Cyan', 'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
+    \	...
+    \]
+<
 The search type highlighting (in the search message) can be changed via: >
     highlight link SearchSpecialSearchType MoreMsg
 <
@@ -313,7 +318,7 @@ http://vim.wikia.com/wiki/Highlight_multiple_words:
 ==============================================================================
 HISTORY								*mark-history*
 
-2.6.3	26-Mar-2012
+2.6.3	27-Mar-2012
 - ENH: Allow choosing of palette and limiting of default mark highlight groups
   via g:mwDefaultHighlightingPalette and g:mwDefaultHighlightingNum.
 - ENH: Offer an extended color palette in addition to the original 6-color one.
