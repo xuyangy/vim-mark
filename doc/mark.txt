@@ -293,7 +293,7 @@ You can achieve the same with the Mark plugin through the following scriptlet: >
     function! s:GetVisualSelectionAsLiteralWhitespaceIndifferentPattern()
     	return substitute(escape(mark#GetVisualSelection(), '\' . '^$.*[~'), '\_s\+', '\\_s\\+', 'g')
     endfunction
-    vnoremap <silent> <Plug>MarkWhitespaceIndifferent <C-\><C-n>:call mark#DoMark(<SID>GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())<CR>
+    vnoremap <silent> <Plug>MarkWhitespaceIndifferent :<C-u>if !mark#DoMark(v:count, <SID>GetVisualSelectionAsLiteralWhitespaceIndifferentPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 Using this, you can assign a new visual mode mapping <Leader>* >
     vmap <Leader>* <Plug>MarkWhitespaceIndifferent
 or override the default |v_<Leader>m| mapping, in case you always want this
@@ -339,6 +339,8 @@ HISTORY								*mark-history*
 - ENH: When a [count] exceeding the number of available mark groups is given,
   a summary of marks is given and the user is asked to select a mark group.
   This allows to interactively choose a color via 99<Leader>m.
+  If you use the |mark-whitespace-indifferent| mappings, *** PLEASE UPDATE THE
+  vnoremap <Plug>MarkWhitespaceIndifferent DEFINITION ***
 - ENH: Include count of alternative patterns in :Marks list.
 - CHG: Use ">" for next mark and "/" for last search in :Marks.
 
