@@ -10,10 +10,12 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.6.2
+" Version:     2.6.4
 " Changes:
-" 21-Apr-2012, Ingo Karkat
+" 23-Apr-2012, Ingo Karkat + fanhe
 " - Force case via \c / \C instead of temporarily unsetting 'smartcase'.
+" - Allow to override 'ignorecase' setting via g:mwIgnoreCase. Thanks to fanhe
+"   for the idea and sending a patch.
 "
 " 26-Mar-2012, Ingo Karkat
 " - ENH: When a [count] exceeding the number of available mark groups is given,
@@ -219,7 +221,7 @@ function! s:EscapeText( text )
 	return substitute( escape(a:text, '\' . '^$.*[~'), "\n", '\\n', 'ge' )
 endfunction
 function! s:IsIgnoreCase( expr )
-	return (&ignorecase && a:expr !~# '\\\@<!\\C')
+	return ((exists('g:mwIgnoreCase') ? g:mwIgnoreCase : &ignorecase) && a:expr !~# '\\\@<!\\C')
 endfunction
 " Mark the current word, like the built-in star command.
 " If the cursor is on an existing mark, remove it.
