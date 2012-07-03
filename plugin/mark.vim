@@ -211,7 +211,7 @@ endif
 
 
 "- default highlightings ------------------------------------------------------
-function! s:GetPalette()
+function! s:DefaultHighlightings()
 	let l:palette = []
 	if type(g:mwDefaultHighlightingPalette) == type([])
 		" There are custom color definitions, not a named built-in palette.
@@ -344,20 +344,16 @@ function! s:GetPalette()
 		echohl WarningMsg
 		echomsg v:warningmsg
 		echohl None
+
+		return
 	endif
 
-	return l:palette
-endfunction
-function! s:DefineHighlightings( palette, isOverride )
-	let l:command = (a:isOverride ? 'highlight' : 'highlight def')
-	let l:highlightingNum = (g:mwDefaultHighlightingNum == -1 ? len(a:palette) : g:mwDefaultHighlightingNum)
-	for i in range(1, l:highlightingNum)
-		execute l:command 'MarkWord' . i join(map(items(a:palette[i - 1]), 'join(v:val, "=")'))
+	for i in range(1, (g:mwDefaultHighlightingNum == -1 ? len(l:palette) : g:mwDefaultHighlightingNum))
+		execute 'highlight def MarkWord' . i join(map(items(l:palette[i - 1]), 'join(v:val, "=")'))
 	endfor
-	return l:highlightingNum
 endfunction
-call s:DefineHighlightings(s:GetPalette(), 0)
-autocmd ColorScheme * call <SID>DefineHighlightings(<SID>GetPalette(), 0)
+call s:DefaultHighlightings()
+autocmd ColorScheme * call <SID>DefaultHighlightings()
 
 " Default highlighting for the special search type.
 " You can override this by defining / linking the 'SearchSpecialSearchType'
@@ -429,16 +425,6 @@ command! -bar Marks call mark#List()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
 command! -bar MarkSave call mark#SaveCommand()
-function! s:SetPalette()
-	let l:palette = s:GetPalette()
-	if empty(l:palette)
-		return
-	endif
-
-	call mark#ReInit(s:DefineHighlightings(l:palette, 1))
-	call mark#UpdateScope()
-endfunction
-command! -bar MarkPalette call <SID>SetPalette()
 
 
 "- marks persistence ----------------------------------------------------------
