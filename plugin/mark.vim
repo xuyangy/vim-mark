@@ -13,8 +13,11 @@
 "  - Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher.
 "  - mark.vim autoload script.
 "
-" Version:     2.6.5
+" Version:     2.6.6
 " Changes:
+" 04-Jul-2012, Ingo Karkat
+" - Add "maximum" palette contributed by rockybalboa4.
+"
 " 24-Jun-2012, Ingo Karkat
 " - Don't define the default <Leader>m and <Leader>r mappings in select mode,
 "   just visual mode. Thanks to rockybalboa4 for pointing this out.
@@ -208,7 +211,7 @@ endif
 
 
 "- default highlightings ------------------------------------------------------
-function! s:DefaultHighlightings()
+function! s:GetPalette()
 	let l:palette = []
 	if type(g:mwDefaultHighlightingPalette) == type([])
 		" There are custom color definitions, not a named built-in palette.
@@ -244,21 +247,117 @@ function! s:DefaultHighlightings()
 		\   { 'ctermbg':'Blue',       'ctermfg':'White', 'guibg':'#0000FF', 'guifg':'#F0F0FF' },
 		\   { 'ctermbg':'DarkRed',    'ctermfg':'White', 'guibg':'#FF0000', 'guifg':'#FFFFFF' },
 		\]
+	elseif g:mwDefaultHighlightingPalette ==# 'maximum'
+		let l:palette = [
+		\   { 'ctermbg':'Cyan',       'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
+		\   { 'ctermbg':'Green',      'ctermfg':'Black', 'guibg':'#A4E57E', 'guifg':'Black' },
+		\   { 'ctermbg':'Yellow',     'ctermfg':'Black', 'guibg':'#FFDB72', 'guifg':'Black' },
+		\   { 'ctermbg':'Red',        'ctermfg':'Black', 'guibg':'#FF7272', 'guifg':'Black' },
+		\   { 'ctermbg':'Magenta',    'ctermfg':'Black', 'guibg':'#FFB3FF', 'guifg':'Black' },
+		\   { 'ctermbg':'Blue',       'ctermfg':'Black', 'guibg':'#9999FF', 'guifg':'Black' },
+		\]
+		if has('gui_running') || &t_Co >= 88
+		let l:palette += [
+		\   { 'ctermfg':'White',      'ctermbg':'17',    'guifg':'White',   'guibg':'#00005f' },
+		\   { 'ctermfg':'White',      'ctermbg':'22',    'guifg':'White',   'guibg':'#005f00' },
+		\   { 'ctermfg':'White',      'ctermbg':'23',    'guifg':'White',   'guibg':'#005f5f' },
+		\   { 'ctermfg':'White',      'ctermbg':'27',    'guifg':'White',   'guibg':'#005fff' },
+		\   { 'ctermfg':'White',      'ctermbg':'29',    'guifg':'White',   'guibg':'#00875f' },
+		\   { 'ctermfg':'White',      'ctermbg':'34',    'guifg':'White',   'guibg':'#00af00' },
+		\   { 'ctermfg':'Black',      'ctermbg':'37',    'guifg':'Black',   'guibg':'#00afaf' },
+		\   { 'ctermfg':'Black',      'ctermbg':'43',    'guifg':'Black',   'guibg':'#00d7af' },
+		\   { 'ctermfg':'Black',      'ctermbg':'47',    'guifg':'Black',   'guibg':'#00ff5f' },
+		\   { 'ctermfg':'White',      'ctermbg':'52',    'guifg':'White',   'guibg':'#5f0000' },
+		\   { 'ctermfg':'White',      'ctermbg':'53',    'guifg':'White',   'guibg':'#5f005f' },
+		\   { 'ctermfg':'White',      'ctermbg':'58',    'guifg':'White',   'guibg':'#5f5f00' },
+		\   { 'ctermfg':'White',      'ctermbg':'60',    'guifg':'White',   'guibg':'#5f5f87' },
+		\   { 'ctermfg':'White',      'ctermbg':'64',    'guifg':'White',   'guibg':'#5f8700' },
+		\   { 'ctermfg':'White',      'ctermbg':'65',    'guifg':'White',   'guibg':'#5f875f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'66',    'guifg':'Black',   'guibg':'#5f8787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'72',    'guifg':'Black',   'guibg':'#5faf87' },
+		\   { 'ctermfg':'Black',      'ctermbg':'74',    'guifg':'Black',   'guibg':'#5fafd7' },
+		\   { 'ctermfg':'Black',      'ctermbg':'78',    'guifg':'Black',   'guibg':'#5fd787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'79',    'guifg':'Black',   'guibg':'#5fd7af' },
+		\   { 'ctermfg':'Black',      'ctermbg':'85',    'guifg':'Black',   'guibg':'#5fffaf' },
+		\]
+		endif
+		if has('gui_running') || &t_Co >= 256
+		let l:palette += [
+		\   { 'ctermfg':'White',      'ctermbg':'90',    'guifg':'White',   'guibg':'#870087' },
+		\   { 'ctermfg':'White',      'ctermbg':'95',    'guifg':'White',   'guibg':'#875f5f' },
+		\   { 'ctermfg':'White',      'ctermbg':'96',    'guifg':'White',   'guibg':'#875f87' },
+		\   { 'ctermfg':'Black',      'ctermbg':'101',   'guifg':'Black',   'guibg':'#87875f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'107',   'guifg':'Black',   'guibg':'#87af5f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'114',   'guifg':'Black',   'guibg':'#87d787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'117',   'guifg':'Black',   'guibg':'#87d7ff' },
+		\   { 'ctermfg':'Black',      'ctermbg':'118',   'guifg':'Black',   'guibg':'#87ff00' },
+		\   { 'ctermfg':'Black',      'ctermbg':'122',   'guifg':'Black',   'guibg':'#87ffd7' },
+		\   { 'ctermfg':'White',      'ctermbg':'130',   'guifg':'White',   'guibg':'#af5f00' },
+		\   { 'ctermfg':'White',      'ctermbg':'131',   'guifg':'White',   'guibg':'#af5f5f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'133',   'guifg':'Black',   'guibg':'#af5faf' },
+		\   { 'ctermfg':'Black',      'ctermbg':'138',   'guifg':'Black',   'guibg':'#af8787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'142',   'guifg':'Black',   'guibg':'#afaf00' },
+		\   { 'ctermfg':'Black',      'ctermbg':'152',   'guifg':'Black',   'guibg':'#afd7d7' },
+		\   { 'ctermfg':'White',      'ctermbg':'160',   'guifg':'White',   'guibg':'#d70000' },
+		\   { 'ctermfg':'Black',      'ctermbg':'166',   'guifg':'Black',   'guibg':'#d75f00' },
+		\   { 'ctermfg':'Black',      'ctermbg':'169',   'guifg':'Black',   'guibg':'#d75faf' },
+		\   { 'ctermfg':'Black',      'ctermbg':'174',   'guifg':'Black',   'guibg':'#d78787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'175',   'guifg':'Black',   'guibg':'#d787af' },
+		\   { 'ctermfg':'Black',      'ctermbg':'186',   'guifg':'Black',   'guibg':'#d7d787' },
+		\   { 'ctermfg':'Black',      'ctermbg':'190',   'guifg':'Black',   'guibg':'#d7ff00' },
+		\   { 'ctermfg':'White',      'ctermbg':'198',   'guifg':'White',   'guibg':'#ff0087' },
+		\   { 'ctermfg':'Black',      'ctermbg':'202',   'guifg':'Black',   'guibg':'#ff5f00' },
+		\   { 'ctermfg':'Black',      'ctermbg':'204',   'guifg':'Black',   'guibg':'#ff5f87' },
+		\   { 'ctermfg':'Black',      'ctermbg':'209',   'guifg':'Black',   'guibg':'#ff875f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'212',   'guifg':'Black',   'guibg':'#ff87d7' },
+		\   { 'ctermfg':'Black',      'ctermbg':'215',   'guifg':'Black',   'guibg':'#ffaf5f' },
+		\   { 'ctermfg':'Black',      'ctermbg':'220',   'guifg':'Black',   'guibg':'#ffd700' },
+		\   { 'ctermfg':'Black',      'ctermbg':'224',   'guifg':'Black',   'guibg':'#ffd7d7' },
+		\   { 'ctermfg':'Black',      'ctermbg':'228',   'guifg':'Black',   'guibg':'#ffff87' },
+		\]
+		endif
+		if has('gui_running')
+		let l:palette += [
+		\   {                                            'guifg':'Black',   'guibg':'#b3dcff' },
+		\   {                                            'guifg':'Black',   'guibg':'#99cbd6' },
+		\   {                                            'guifg':'Black',   'guibg':'#7afff0' },
+		\   {                                            'guifg':'Black',   'guibg':'#a6ffd2' },
+		\   {                                            'guifg':'Black',   'guibg':'#a2de9e' },
+		\   {                                            'guifg':'Black',   'guibg':'#bcff80' },
+		\   {                                            'guifg':'Black',   'guibg':'#e7ff8c' },
+		\   {                                            'guifg':'Black',   'guibg':'#f2e19d' },
+		\   {                                            'guifg':'Black',   'guibg':'#ffcc73' },
+		\   {                                            'guifg':'Black',   'guibg':'#f7af83' },
+		\   {                                            'guifg':'Black',   'guibg':'#fcb9b1' },
+		\   {                                            'guifg':'Black',   'guibg':'#ff8092' },
+		\   {                                            'guifg':'Black',   'guibg':'#ff73bb' },
+		\   {                                            'guifg':'Black',   'guibg':'#fc97ef' },
+		\   {                                            'guifg':'Black',   'guibg':'#c8a3d9' },
+		\   {                                            'guifg':'Black',   'guibg':'#ac98eb' },
+		\   {                                            'guifg':'Black',   'guibg':'#6a6feb' },
+		\   {                                            'guifg':'Black',   'guibg':'#8caeff' },
+		\   {                                            'guifg':'Black',   'guibg':'#70b9fa' },
+		\]
+		endif
 	elseif ! empty(g:mwDefaultHighlightingPalette)
 		let v:warningmsg = 'Mark: Unknown value for g:mwDefaultHighlightingPalette: ' . g:mwDefaultHighlightingPalette
 		echohl WarningMsg
 		echomsg v:warningmsg
 		echohl None
-
-		return
 	endif
 
-	for i in range(1, (g:mwDefaultHighlightingNum == -1 ? len(l:palette) : g:mwDefaultHighlightingNum))
-		execute 'highlight def MarkWord' . i join(map(items(l:palette[i - 1]), 'join(v:val, "=")'))
-	endfor
+	return l:palette
 endfunction
-call s:DefaultHighlightings()
-autocmd ColorScheme * call <SID>DefaultHighlightings()
+function! s:DefineHighlightings( palette, isOverride )
+	let l:command = (a:isOverride ? 'highlight' : 'highlight def')
+	let l:highlightingNum = (g:mwDefaultHighlightingNum == -1 ? len(a:palette) : g:mwDefaultHighlightingNum)
+	for i in range(1, l:highlightingNum)
+		execute l:command 'MarkWord' . i join(map(items(a:palette[i - 1]), 'join(v:val, "=")'))
+	endfor
+	return l:highlightingNum
+endfunction
+call s:DefineHighlightings(s:GetPalette(), 0)
+autocmd ColorScheme * call <SID>DefineHighlightings(<SID>GetPalette(), 0)
 
 " Default highlighting for the special search type.
 " You can override this by defining / linking the 'SearchSpecialSearchType'
@@ -330,6 +429,16 @@ command! -bar Marks call mark#List()
 
 command! -bar MarkLoad call mark#LoadCommand(1)
 command! -bar MarkSave call mark#SaveCommand()
+function! s:SetPalette()
+	let l:palette = s:GetPalette()
+	if empty(l:palette)
+		return
+	endif
+
+	call mark#ReInit(s:DefineHighlightings(l:palette, 1))
+	call mark#UpdateScope()
+endfunction
+command! -bar MarkPalette call <SID>SetPalette()
 
 
 "- marks persistence ----------------------------------------------------------
