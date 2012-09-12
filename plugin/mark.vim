@@ -298,10 +298,14 @@ nnoremap <silent> <Plug>MarkSearchCurrentNext :<C-u>call mark#SearchCurrentMark(
 nnoremap <silent> <Plug>MarkSearchCurrentPrev :<C-u>call mark#SearchCurrentMark(1)<CR>
 nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>call mark#SearchAnyMark(0)<CR>
 nnoremap <silent> <Plug>MarkSearchAnyPrev     :<C-u>call mark#SearchAnyMark(1)<CR>
-nnoremap <silent> <Plug>MarkSearchNext        :<C-u>if !mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchPrev        :<C-u>if !mark#SearchNext(1)<Bar>execute 'normal! #zv'<Bar>endif<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'.
+nnoremap <silent> <Plug>MarkSearchNext        :<C-u>if !mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchPrev        :<C-u>if !mark#SearchNext(1)<Bar>execute 'normal! #zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrCurNext   :<C-u>if !mark#SearchNext(0,'mark#SearchCurrentMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrCurPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrAnyNext   :<C-u>if !mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrAnyPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
