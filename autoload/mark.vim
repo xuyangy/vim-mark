@@ -809,12 +809,12 @@ function! mark#ToPatternList()
 	" may differ on the next invocation (e.g. due to a different number of
 	" highlight groups in Vim and GVIM). We want to keep empty patterns in the
 	" front and middle to maintain the mapping to highlight groups, though.
-	let l:highestNonEmptyIndex = s:markNum -1
+	let l:highestNonEmptyIndex = s:markNum - 1
 	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex])
 		let l:highestNonEmptyIndex -= 1
 	endwhile
 
-	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0:l:highestNonEmptyIndex])
+	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0 : l:highestNonEmptyIndex])
 endfunction
 
 " :MarkLoad command.
