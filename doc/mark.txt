@@ -225,7 +225,7 @@ To uninstall, use the |:RmVimball| command.
 
 DEPENDENCIES						   *mark-dependencies*
 
-- Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher.
+- Requires Vim 7.1 with |matchadd()|, or Vim 7.2 or higher.
 
 ==============================================================================
 CONFIGURATION						  *mark-configuration*
