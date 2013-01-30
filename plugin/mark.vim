@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously.
 "
 " Copyright:   (C) 2005-2008 Yuheng Xie
-"              (C) 2008-2012 Ingo Karkat
+"              (C) 2008-2013 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
@@ -14,8 +14,17 @@
 "  - mark.vim autoload script
 "  - mark/palettes.vim autoload script for additional palettes
 "
-" Version:     2.7.0
+" Version:     2.8.0
 " Changes:
+" 31-Jan-2013, Ingo Karkat
+" - Also allow a [count] for <Leader>r to select (or query for) a mark group, as
+"   with <Leader>m.
+"
+" 13-Sep-2012, Ingo Karkat
+" - Enable alternative * / # mappings that do not remember the last search type
+"   through new <Plug>MarkSearchOrCurNext, <Plug>MarkSearchOrCurPrev,
+"   <Plug>MarkSearchOrAnyNext, <Plug>MarkSearchOrAnyPrev mappings.
+"
 " 04-Jul-2012, Ingo Karkat
 " - Introduce g:mwPalettes instead of hard-coding them in
 "   s:DefaultHighlightings(), which got s:DefineHighlightings() extracted and
@@ -288,8 +297,8 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 nnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
-vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
+nnoremap <silent> <Plug>MarkRegex    :<C-u>if !mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkRegex    :<C-u>if !mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
@@ -309,40 +318,40 @@ nnoremap <silent> <Plug>MarkSearchOrAnyPrev   :<C-u>if !mark#SearchNext(1,'mark#
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
-	nmap <unique> <silent> <Leader>m <Plug>MarkSet
+	nmap <unique> <Leader>m <Plug>MarkSet
 endif
 if !hasmapto('<Plug>MarkSet', 'v')
-	xmap <unique> <silent> <Leader>m <Plug>MarkSet
+	xmap <unique> <Leader>m <Plug>MarkSet
 endif
 if !hasmapto('<Plug>MarkRegex', 'n')
-	nmap <unique> <silent> <Leader>r <Plug>MarkRegex
+	nmap <unique> <Leader>r <Plug>MarkRegex
 endif
 if !hasmapto('<Plug>MarkRegex', 'v')
-	xmap <unique> <silent> <Leader>r <Plug>MarkRegex
+	xmap <unique> <Leader>r <Plug>MarkRegex
 endif
 if !hasmapto('<Plug>MarkClear', 'n')
-	nmap <unique> <silent> <Leader>n <Plug>MarkClear
+	nmap <unique> <Leader>n <Plug>MarkClear
 endif
 " No default mapping for <Plug>MarkAllClear.
 " No default mapping for <Plug>MarkToggle.
 
 if !hasmapto('<Plug>MarkSearchCurrentNext', 'n')
-	nmap <unique> <silent> <Leader>* <Plug>MarkSearchCurrentNext
+	nmap <unique> <Leader>* <Plug>MarkSearchCurrentNext
 endif
 if !hasmapto('<Plug>MarkSearchCurrentPrev', 'n')
-	nmap <unique> <silent> <Leader># <Plug>MarkSearchCurrentPrev
+	nmap <unique> <Leader># <Plug>MarkSearchCurrentPrev
 endif
 if !hasmapto('<Plug>MarkSearchAnyNext', 'n')
-	nmap <unique> <silent> <Leader>/ <Plug>MarkSearchAnyNext
+	nmap <unique> <Leader>/ <Plug>MarkSearchAnyNext
 endif
 if !hasmapto('<Plug>MarkSearchAnyPrev', 'n')
-	nmap <unique> <silent> <Leader>? <Plug>MarkSearchAnyPrev
+	nmap <unique> <Leader>? <Plug>MarkSearchAnyPrev
 endif
 if !hasmapto('<Plug>MarkSearchNext', 'n')
-	nmap <unique> <silent> * <Plug>MarkSearchNext
+	nmap <unique> * <Plug>MarkSearchNext
 endif
 if !hasmapto('<Plug>MarkSearchPrev', 'n')
-	nmap <unique> <silent> # <Plug>MarkSearchPrev
+	nmap <unique> # <Plug>MarkSearchPrev
 endif
 
 
