@@ -625,18 +625,48 @@ endfunction
 
 " Search current mark.
 function! mark#SearchCurrentMark( isBackward )
+	let l:result = 0
+
 	let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
 	if empty(l:markText)
 		if s:lastSearch == -1
-			call mark#SearchAnyMark(a:isBackward)
+			let l:result = mark#SearchAnyMark(a:isBackward)
 			let s:lastSearch = mark#CurrentMark()[2]
 		else
-			call s:Search(s:pattern[s:lastSearch], a:isBackward, [], 'mark-' . (s:lastSearch + 1))
+			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], 'mark-' . (s:lastSearch + 1))
 		endif
 	else
-		call s:Search(l:markText, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 		let s:lastSearch = l:markIndex
 	endif
+
+	return l:result
+endfunction
+
+function! mark#SearchGroupMark( groupNum, count, isBackward )
+	if a:groupNum == 0
+		let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+		if empty(l:markText)
+			return 0
+		endif
+	else
+		let l:groupNum = a:groupNum
+		if l:groupNum > s:markNum
+			" This highlight group does not exist.
+			let l:groupNum = mark#QueryMarkGroupNum()
+			if l:groupNum < 1 || l:groupNum > s:markNum
+				return 0
+			endif
+		endif
+
+		let l:markIndex = l:groupNum - 1
+		let l:markText = s:pattern[l:markIndex]
+		let l:markPosition = []
+	endif
+
+	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+	let s:lastSearch = l:markIndex
+	return l:result
 endfunction
 
 function! s:ErrorMsg( text )
@@ -658,7 +688,7 @@ function! s:ErrorMessage( searchType, searchPattern, isBackward )
 endfunction
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning.
-function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
+function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType )
 	if empty(a:pattern)
 		call s:NoMarkErrorMessage()
 		return 0
@@ -676,7 +706,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	" case-matching behavior through \c / \C.
 	let l:searchPattern = (s:IsIgnoreCase(a:pattern) ? '\c' : '\C') . a:pattern
 
-	let l:count = v:count1
+	let l:count = a:count
 	let l:isWrapped = 0
 	let l:isMatch = 0
 	let l:line = 0
@@ -687,7 +717,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 		let [l:line, l:col] = searchpos( l:searchPattern, (a:isBackward ? 'b' : '') )
 
 "****D echomsg '****' a:isBackward string([l:line, l:col]) string(a:currentMarkPosition) l:count
-		if a:isBackward && l:line > 0 && [l:line, l:col] == a:currentMarkPosition && l:count == v:count1
+		if a:isBackward && l:line > 0 && [l:line, l:col] == a:currentMarkPosition && l:count == a:count
 			" On a search in backward direction, the first match is the start of the
 			" current mark (if the cursor was positioned on the current mark text, and
 			" not at the start of the mark text).
@@ -732,8 +762,8 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	endwhile
 
 	" We're not stuck when the search wrapped around and landed on the current
-	" mark; that's why we exclude a possible wrap-around via v:count1 == 1.
-	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && v:count1 == 1)
+	" mark; that's why we exclude a possible wrap-around via a:count == 1.
+	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && a:count == 1)
 "****D echomsg '****' l:line l:isStuckAtCurrentMark l:isWrapped l:isMatch string([l:line, l:col]) string(a:currentMarkPosition)
 	if l:line > 0 && ! l:isStuckAtCurrentMark
 		let l:matchPosition = getpos('.')
@@ -795,8 +825,8 @@ endfunction
 function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
-	call s:Search(l:markText, a:isBackward, l:markPosition, 'mark-*')
 	let s:lastSearch = -1
+	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-*')
 endfunction
 
 " Search last searched mark.
