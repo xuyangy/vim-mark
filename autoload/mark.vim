@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously.
 "
 " Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2012 by Ingo Karkat
+"              (C) 2008-2013 by Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
@@ -10,8 +10,12 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.7.2
+" Version:     2.8.0
 " Changes:
+" 31-Jan-2013, Ingo Karkat
+" - mark#MarkRegex() taken an additional a:groupNum argument to also allow a
+"   [count] for <Leader>r.
+"
 " 15-Oct-2012, Ingo Karkat
 " - Issue an error message "No marks defined" instead of moving the cursor by
 "   one character when there are no marks (e.g. initially or after :MarkClear).
@@ -275,15 +279,18 @@ function! mark#GetVisualSelectionAsRegexp()
 endfunction
 
 " Manually input a regular expression.
-function! mark#MarkRegex( regexpPreset )
+function! mark#MarkRegex( groupNum, regexpPreset )
 	call inputsave()
-	echohl Question
-	let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
-	echohl None
+		echohl Question
+			let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
+		echohl None
 	call inputrestore()
-	if ! empty(l:regexp)
-		call mark#DoMark(0, l:regexp)
+	if empty(l:regexp)
+		return 0
 	endif
+
+	redraw " This is necessary when the user is queried for the mark group.
+	return mark#DoMark(a:groupNum, l:regexp)
 endfunction
 
 function! s:Cycle( ... )
@@ -990,6 +997,7 @@ endfunction
 
 
 "- initializations ------------------------------------------------------------
+
 augroup Mark
 	autocmd!
 	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
