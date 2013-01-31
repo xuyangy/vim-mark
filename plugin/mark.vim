@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously.
 "
 " Copyright:   (C) 2005-2008 Yuheng Xie
-"              (C) 2008-2012 Ingo Karkat
+"              (C) 2008-2013 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
@@ -14,8 +14,19 @@
 "  - mark.vim autoload script
 "  - mark/palettes.vim autoload script for additional palettes
 "
-" Version:     2.7.1
+" Version:     2.8.0
 " Changes:
+" 31-Jan-2013, Ingo Karkat
+" - Also allow a [count] for <Leader>r to select (or query for) a mark group, as
+"   with <Leader>m.
+" - CHG: Also set the current mark to the used mark group when a mark was set
+"   via <Leader>r and :Mark so that it is easier to determine whether the
+"   entered pattern actually matches anywhere. Thanks to Xiaopan Zhang for
+"   notifying me about this problem.
+" - Add <Plug>MarkSearchGroupNext / <Plug>MarkSearchGroupPrev to enable
+"   searching for particular mark groups. Thanks to Xiaopan Zhang for the
+"   suggestion.
+"
 " 13-Sep-2012, Ingo Karkat
 " - Enable alternative * / # mappings that do not remember the last search type
 "   through new <Plug>MarkSearchOrCurNext, <Plug>MarkSearchOrCurPrev,
@@ -292,10 +303,10 @@ highlight def link SearchSpecialSearchType MoreMsg
 "- mappings -------------------------------------------------------------------
 
 nnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex('')<CR>
-vnoremap <silent> <Plug>MarkRegex    :<C-u>call mark#MarkRegex(mark#GetVisualSelectionAsRegexp())<CR>
-nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkSet      :<C-u>if !mark#DoMark(v:count, mark#GetVisualSelectionAsLiteralPattern())[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkRegex    :<C-u>if !mark#MarkRegex(v:count, '')<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+vnoremap <silent> <Plug>MarkRegex    :<C-u>if !mark#MarkRegex(v:count, mark#GetVisualSelectionAsRegexp())<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkClear    :<C-u>if !mark#DoMark(v:count, (v:count ? '' : mark#CurrentMark()[0]))[0]<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkAllClear :<C-u>call mark#ClearAll()<CR>
 nnoremap <silent> <Plug>MarkToggle   :<C-u>call mark#Toggle()<CR>
 
@@ -311,6 +322,9 @@ nnoremap <silent> <Plug>MarkSearchOrCurNext   :<C-u>if !mark#SearchNext(0,'mark#
 nnoremap <silent> <Plug>MarkSearchOrCurPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyNext   :<C-u>if !mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
+
+nnoremap <silent> <Plug>MarkSearchGroupNext   :<C-u>call mark#SearchGroupMark(v:count, 1, 0)<CR>
+nnoremap <silent> <Plug>MarkSearchGroupPrev   :<C-u>call mark#SearchGroupMark(v:count, 1, 1)<CR>
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
@@ -354,7 +368,7 @@ endif
 
 "- commands -------------------------------------------------------------------
 
-command! -count -nargs=? Mark if !mark#DoMark(<count>, <f-args>) | echoerr printf('Only %d mark highlight groups', mark#GetGroupNum()) | endif
+command! -count -nargs=? Mark if !mark#DoMarkAndSetCurrent(<count>, <f-args>)[0] | echoerr printf('Only %d mark highlight groups', mark#GetGroupNum()) | endif
 command! -bar MarkClear call mark#ClearAll()
 command! -bar Marks call mark#List()
 
