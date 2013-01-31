@@ -2,7 +2,7 @@
 " Description: Highlight several words in different colors simultaneously.
 "
 " Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2012 by Ingo Karkat
+"              (C) 2008-2013 by Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
@@ -10,8 +10,23 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.7.2
+" Version:     2.8.0
 " Changes:
+" 31-Jan-2013, Ingo Karkat
+" - mark#MarkRegex() takes an additional a:groupNum argument to also allow a
+"   [count] for <Leader>r.
+" - Add mark#DoMarkAndSetCurrent() variant of mark#DoMark() that also sets the
+"   current mark to the used mark group when a mark was set. Use that for
+"   <Leader>r and :Mark so that it is easier to determine whether the entered
+"   pattern actually matches anywhere. Thanks to Xiaopan Zhang for notifying me
+"   about this problem. mark#DoMark() now returns a List of [success,
+"   markGroupNum] to enable the wrapper.
+" - Let the various search functions return whether the search succeeded. Though
+"   I don't use this (the mark search shouldn't beep like built-in n / N), it
+"   may come handy one day.
+" - Add mark#SearchGroupMark() to be able to search for a particular mark group
+"   (or the current if none specified), with a specified count.
+"
 " 15-Oct-2012, Ingo Karkat
 " - Issue an error message "No marks defined" instead of moving the cursor by
 "   one character when there are no marks (e.g. initially or after :MarkClear).
@@ -253,7 +268,7 @@ function! mark#MarkCurrentWord( groupNum )
 			endif
 		endif
 	endif
-	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp))
+	return (empty(l:regexp) ? 0 : mark#DoMark(a:groupNum, l:regexp)[0])
 endfunction
 
 function! mark#GetVisualSelection()
@@ -275,15 +290,18 @@ function! mark#GetVisualSelectionAsRegexp()
 endfunction
 
 " Manually input a regular expression.
-function! mark#MarkRegex( regexpPreset )
+function! mark#MarkRegex( groupNum, regexpPreset )
 	call inputsave()
-	echohl Question
-	let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
-	echohl None
+		echohl Question
+			let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
+		echohl None
 	call inputrestore()
-	if ! empty(l:regexp)
-		call mark#DoMark(0, l:regexp)
+	if empty(l:regexp)
+		return 0
 	endif
+
+	redraw " This is necessary when the user is queried for the mark group.
+	return mark#DoMarkAndSetCurrent(a:groupNum, l:regexp)[0]
 endfunction
 
 function! s:Cycle( ... )
@@ -483,6 +501,10 @@ endfunction
 function! s:EchoMarksDisabled()
 	echo 'All marks disabled'
 endfunction
+
+" Return [success, markGroupNum]. success is true when the mark has been set or
+" cleared. markGroupNum is the mark group number where the mark was set. It is 0
+" if the group was cleared.
 function! mark#DoMark( groupNum, ...)
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again.
@@ -493,7 +515,7 @@ function! mark#DoMark( groupNum, ...)
 			echohl ErrorMsg
 			echomsg v:errmsg
 			echohl None
-			return 0
+			return [0, 0]
 		endif
 	endif
 
@@ -502,7 +524,7 @@ function! mark#DoMark( groupNum, ...)
 		" This highlight group does not exist.
 		let l:groupNum = mark#QueryMarkGroupNum()
 		if l:groupNum < 1 || l:groupNum > s:markNum
-			return 0
+			return [0, 0]
 		endif
 	endif
 
@@ -518,7 +540,7 @@ function! mark#DoMark( groupNum, ...)
 			call s:EchoMarkCleared(l:groupNum)
 		endif
 
-		return 1
+		return [1, 0]
 	endif
 
 	if l:groupNum == 0
@@ -528,7 +550,7 @@ function! mark#DoMark( groupNum, ...)
 			if regexp ==# s:pattern[i]
 				call s:ClearMark(i)
 				call s:EchoMarkCleared(i + 1)
-				return 1
+				return [1, 0]
 			endif
 			let i += 1
 		endwhile
@@ -546,7 +568,7 @@ function! mark#DoMark( groupNum, ...)
 				if empty(regexp)
 					call s:ClearMark(l:groupNum - 1)
 					call s:EchoMarkCleared(l:groupNum)
-					return 1
+					return [1, 0]
 				endif
 			endif
 		endif
@@ -579,7 +601,15 @@ function! mark#DoMark( groupNum, ...)
 	endif
 
 	call s:EchoMark(i + 1, regexp)
-	return 1
+	return [1, i + 1]
+endfunction
+function! mark#DoMarkAndSetCurrent( groupNum, ... )
+	let l:result = call('mark#DoMark', [a:groupNum] + a:000)
+	let l:markGroupNum = l:result[1]
+	if l:markGroupNum > 0
+		let s:lastSearch = l:markGroupNum - 1
+	endif
+	return l:result
 endfunction
 
 " Return [mark text, mark start position, mark index] of the mark under the
@@ -618,18 +648,48 @@ endfunction
 
 " Search current mark.
 function! mark#SearchCurrentMark( isBackward )
+	let l:result = 0
+
 	let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
 	if empty(l:markText)
 		if s:lastSearch == -1
-			call mark#SearchAnyMark(a:isBackward)
+			let l:result = mark#SearchAnyMark(a:isBackward)
 			let s:lastSearch = mark#CurrentMark()[2]
 		else
-			call s:Search(s:pattern[s:lastSearch], a:isBackward, [], 'mark-' . (s:lastSearch + 1))
+			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], 'mark-' . (s:lastSearch + 1))
 		endif
 	else
-		call s:Search(l:markText, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 		let s:lastSearch = l:markIndex
 	endif
+
+	return l:result
+endfunction
+
+function! mark#SearchGroupMark( groupNum, count, isBackward )
+	if a:groupNum == 0
+		let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+		if empty(l:markText)
+			return 0
+		endif
+	else
+		let l:groupNum = a:groupNum
+		if l:groupNum > s:markNum
+			" This highlight group does not exist.
+			let l:groupNum = mark#QueryMarkGroupNum()
+			if l:groupNum < 1 || l:groupNum > s:markNum
+				return 0
+			endif
+		endif
+
+		let l:markIndex = l:groupNum - 1
+		let l:markText = s:pattern[l:markIndex]
+		let l:markPosition = []
+	endif
+
+	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+	let s:lastSearch = l:markIndex
+	return l:result
 endfunction
 
 function! s:ErrorMsg( text )
@@ -651,7 +711,7 @@ function! s:ErrorMessage( searchType, searchPattern, isBackward )
 endfunction
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning.
-function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
+function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType )
 	if empty(a:pattern)
 		call s:NoMarkErrorMessage()
 		return 0
@@ -669,7 +729,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	" case-matching behavior through \c / \C.
 	let l:searchPattern = (s:IsIgnoreCase(a:pattern) ? '\c' : '\C') . a:pattern
 
-	let l:count = v:count1
+	let l:count = a:count
 	let l:isWrapped = 0
 	let l:isMatch = 0
 	let l:line = 0
@@ -680,7 +740,7 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 		let [l:line, l:col] = searchpos( l:searchPattern, (a:isBackward ? 'b' : '') )
 
 "****D echomsg '****' a:isBackward string([l:line, l:col]) string(a:currentMarkPosition) l:count
-		if a:isBackward && l:line > 0 && [l:line, l:col] == a:currentMarkPosition && l:count == v:count1
+		if a:isBackward && l:line > 0 && [l:line, l:col] == a:currentMarkPosition && l:count == a:count
 			" On a search in backward direction, the first match is the start of the
 			" current mark (if the cursor was positioned on the current mark text, and
 			" not at the start of the mark text).
@@ -725,8 +785,8 @@ function! s:Search( pattern, isBackward, currentMarkPosition, searchType )
 	endwhile
 
 	" We're not stuck when the search wrapped around and landed on the current
-	" mark; that's why we exclude a possible wrap-around via v:count1 == 1.
-	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && v:count1 == 1)
+	" mark; that's why we exclude a possible wrap-around via a:count == 1.
+	let l:isStuckAtCurrentMark = ([l:line, l:col] == a:currentMarkPosition && a:count == 1)
 "****D echomsg '****' l:line l:isStuckAtCurrentMark l:isWrapped l:isMatch string([l:line, l:col]) string(a:currentMarkPosition)
 	if l:line > 0 && ! l:isStuckAtCurrentMark
 		let l:matchPosition = getpos('.')
@@ -788,8 +848,8 @@ endfunction
 function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
-	call s:Search(l:markText, a:isBackward, l:markPosition, 'mark-*')
 	let s:lastSearch = -1
+	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-*')
 endfunction
 
 " Search last searched mark.
