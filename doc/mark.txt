@@ -79,8 +79,8 @@ HIGHLIGHTING						   *mark-highlighting*
 {Visual}[N]<Leader>m	Ditto, based on the visual selection.
 
 						     *<Leader>r* *v_<Leader>r*
-<Leader>r		Manually input a regular expression to mark.
-{Visual}<Leader>r	Ditto, based on the visual selection.
+[N]<Leader>r		Manually input a regular expression to mark.
+{Visual}[N]<Leader>r	Ditto, based on the visual selection.
 
 			In accordance with the built-in |star| command,
 			all these mappings use 'ignorecase', but not
