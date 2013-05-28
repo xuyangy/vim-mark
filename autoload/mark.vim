@@ -666,11 +666,19 @@ function! mark#SearchCurrentMark( isBackward )
 	return l:result
 endfunction
 
-function! mark#SearchGroupMark( groupNum, count, isBackward )
+function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 	if a:groupNum == 0
-		let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
-		if empty(l:markText)
-			return 0
+		" No mark group number specified; use last search, and fall back to
+		" current mark if possible.
+		if s:lastSearch == -1
+			let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+			if empty(l:markText)
+				return 0
+			endif
+		else
+			let l:markIndex = s:lastSearch
+			let l:markText = s:pattern[l:markIndex]
+			let l:markPosition = []
 		endif
 	else
 		let l:groupNum = a:groupNum
@@ -688,7 +696,9 @@ function! mark#SearchGroupMark( groupNum, count, isBackward )
 	endif
 
 	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
-	let s:lastSearch = l:markIndex
+	if a:isSetLastSearch
+		let s:lastSearch = l:markIndex
+	endif
 	return l:result
 endfunction
 
