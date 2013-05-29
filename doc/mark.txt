@@ -587,7 +587,7 @@ Initial version published by Yuheng Xie on vim.org.
 ==============================================================================
 Copyright: (C) 2005-2008 Yuheng Xie
            (C) 2008-2012 Ingo Karkat
-The VIM LICENSE applies to this script; see |copyright|.
+The VIM LICENSE applies to this plugin; see |copyright|.
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
 ==============================================================================
