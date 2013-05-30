@@ -16,11 +16,6 @@
 "
 " Version:     2.8.0
 " Changes:
-" 31-May-2013, Ingo Karkat
-" - Define default mappings for keys 1-9 on the numerical keypad to jump to a
-"   particular group (backwards with <C-kN>). Their definition is controlled by
-"   the new g:mwDirectGroupJumpMappingNum variable.
-"
 " 31-Jan-2013, Ingo Karkat
 " - Also allow a [count] for <Leader>r to select (or query for) a mark group, as
 "   with <Leader>m.
@@ -254,9 +249,6 @@ if ! exists('g:mwPalettes')
 	\}
 endif
 
-if ! exists('g:mwDirectGroupJumpMappingNum')
-	let g:mwDirectGroupJumpMappingNum = 9
-endif
 
 
 "- default highlightings ------------------------------------------------------
@@ -330,6 +322,7 @@ nnoremap <silent> <Plug>MarkSearchOrCurNext   :<C-u>if !mark#SearchNext(0,'mark#
 nnoremap <silent> <Plug>MarkSearchOrCurPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyNext   :<C-u>if !mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchOrAnyPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
+
 nnoremap <silent> <Plug>MarkSearchGroupNext   :<C-u>call mark#SearchGroupMark(v:count, 1, 0, 1)<CR>
 nnoremap <silent> <Plug>MarkSearchGroupPrev   :<C-u>call mark#SearchGroupMark(v:count, 1, 1, 1)<CR>
 
@@ -370,26 +363,6 @@ endif
 if !hasmapto('<Plug>MarkSearchPrev', 'n')
 	nmap <unique> # <Plug>MarkSearchPrev
 endif
-" No default mapping for <Plug>MarkSearchOrCurNext
-" No default mapping for <Plug>MarkSearchOrCurPrev
-" No default mapping for <Plug>MarkSearchOrAnyNext
-" No default mapping for <Plug>MarkSearchOrAnyPrev
-" No default mapping for <Plug>MarkSearchGroupNext
-" No default mapping for <Plug>MarkSearchGroupPrev
-
-function! s:MakeDirectGroupMappings()
-	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
-		for [l:isBackward, l:direction, l:keyModifier] in [[0, 'Next', ''], [1, 'Prev', 'C-']]
-			let l:plugMappingName = printf('<Plug>MarkSearchGroup%d%s', l:cnt, l:direction)
-			execute printf('nnoremap <silent> %s :<C-u>call mark#SearchGroupMark(%d, v:count1, %d, 1)<CR>', l:plugMappingName, l:cnt, l:isBackward)
-			if ! hasmapto(l:plugMappingName, 'n')
-				execute printf('nmap <%sk%d> %s', l:keyModifier, l:cnt, l:plugMappingName)
-			endif
-		endfor
-	endfor
-endfunction
-call s:MakeDirectGroupMappings()
-delfunction s:MakeDirectGroupMappings
 
 
 
