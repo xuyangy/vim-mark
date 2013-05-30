@@ -1,8 +1,8 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2005-2008 by Yuheng Xie
-"              (C) 2008-2013 by Ingo Karkat
+" Copyright:   (C) 2005-2008 Yuheng Xie
+"              (C) 2008-2013 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
@@ -12,6 +12,11 @@
 "
 " Version:     2.8.0
 " Changes:
+" 29-May-2013, Ingo Karkat
+" - Factor out s:HasVariablePersistence() and include the note in :MarkLoad,
+"   too.
+" - Use s:ErrorMsg() everywhere.
+"
 " 31-Jan-2013, Ingo Karkat
 " - mark#MarkRegex() takes an additional a:groupNum argument to also allow a
 "   [count] for <Leader>r.
@@ -511,10 +516,7 @@ function! mark#DoMark( groupNum, ...)
 		call mark#Init()
 		if s:markNum <= 0
 			" Still no mark highlightings; complain.
-			let v:errmsg = 'No mark highlightings defined'
-			echohl ErrorMsg
-			echomsg v:errmsg
-			echohl None
+			call s:ErrorMsg('No mark highlightings defined')
 			return [0, 0]
 		endif
 	endif
@@ -908,6 +910,9 @@ function! mark#ToPatternList()
 endfunction
 
 " :MarkLoad command.
+function! s:HasVariablePersistence()
+	return index(split(&viminfo, ','), '!') == -1
+endfunction
 function! mark#LoadCommand( isShowMessages )
 	if exists('g:MARK_MARKS')
 		try
@@ -922,19 +927,12 @@ function! mark#LoadCommand( isShowMessages )
 				endif
 			endif
 		catch /^Vim\%((\a\+)\)\=:E/
-			let v:errmsg = 'Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED'
-			echohl ErrorMsg
-			echomsg v:errmsg
-			echohl None
-
+			call s:ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED')
 			unlet! g:MARK_MARKS
 			unlet! g:MARK_ENABLED
 		endtry
 	elseif a:isShowMessages
-		let v:errmsg = 'No persistent marks found'
-		echohl ErrorMsg
-		echomsg v:errmsg
-		echohl None
+		call s:ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
 	endif
 endfunction
 
@@ -946,11 +944,8 @@ function! s:SavePattern()
 	return ! empty(l:savedMarks)
 endfunction
 function! mark#SaveCommand()
-	if index(split(&viminfo, ','), '!') == -1
-		let v:errmsg = "Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!"
-		echohl ErrorMsg
-		echomsg v:errmsg
-		echohl None
+	if ! s:HasVariablePersistence()
+		call s:ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 		return
 	endif
 
