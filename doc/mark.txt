@@ -154,6 +154,22 @@ SEARCHING						      *mark-searching*
 			You can use Vim's |jumplist| to go back to previous
 			mark matches and the position before a mark search.
 
+						       *mark-keypad-searching*
+If you work with multiple highlight groups and assign special meaning to them
+(e.g. group 1 for notable functions, 2 for variables, 3 for includes), you can
+use the 1-9 keys on the numerical keypad to jump to occurrences of a
+particular highlight group. With the general * and # commands above, you'd
+first need to locate a nearby occurrence of the desired highlight group if
+it's not the last mark used.
+							       *<k1>* *<C-k1>*
+<k1> .. <k9>		Jump to the [count]'th next occurrence of the mark
+			belonging to highlight group 1..9.
+<C-k1> .. <C-k9>	Jump to the [count]'th previous occurrence of the mark
+			belonging to highlight group 1..9.
+			Note that these commands only work when the "Num Lock"
+			indicator of your keyboard is ON; otherwise, the
+			keypad is used for cursor movement.
+
 MARK PERSISTENCE					    *mark-persistence*
 
 The marks can be kept and restored across Vim sessions, using the |viminfo|
@@ -321,6 +337,24 @@ fallback to Vim's original * command, use: >
     nmap * <Plug>MarkSearchOrCurNext
     nmap # <Plug>MarkSearchOrCurPrev
 <
+The search mappings (*, #, etc.) interpret [count] as the number of
+occurrences to jump over. If you don't want to use the separate
+|mark-keypad-searching| mappings, and rather want [count] select the highlight
+group to target (and you can live with jumps restricted to the very next
+match), (re-)define to these mapping targets: >
+    nmap * <Plug>MarkSearchGroupNext
+    nmap # <Plug>MarkSearchGroupPrev
+<
+You can remap the direct group searches (by default via the keypad 1-9 keys): >
+    nmap <Leader>1  <Plug>MarkSearchGroup1Next
+    nmap <Leader>!  <Plug>MarkSearchGroup1Prev
+<					       *g:mwDirectGroupJumpMappingNum*
+If you need more / less groups, this can be configured via: >
+    let g:mwDirectGroupJumpMappingNum = 20
+Set to 0 to completely turn off the keypad mappings. This is easier than
+remapping all <Plug>-mappings.
+
+
 						 *mark-whitespace-indifferent*
 Some people like to create a mark based on the visual selection, like
 |v_<Leader>m|, but have whitespace in the selection match any whitespace when
@@ -364,12 +398,25 @@ TODO								   *mark-todo*
 
 IDEAS								  *mark-ideas*
 
-Taken from an alternative implementation at
-http://vim.wikia.com/wiki/Highlight_multiple_words:
-- Use keys 1-9 on the numeric keypad to toggle a highlight group number.
+- Allow passing a name to :MarkLoad / :MarkSave, persist in g:MARK_{NAME}, to
+  have multiple slots.
 
 ==============================================================================
 HISTORY								*mark-history*
+
+2.8.0	RELEASEME
+- Also allow a [count] for <Leader>r to select (or query for) a mark group, as
+  with <Leader>m.
+- CHG: Also set the current mark to the used mark group when a mark was set
+  via <Leader>r and :Mark so that it is easier to determine whether the
+  entered pattern actually matches anywhere. Thanks to Xiaopan Zhang for
+  notifying me about this problem.
+- Add <Plug>MarkSearchGroupNext / <Plug>MarkSearchGroupPrev to enable
+  searching for particular mark groups. Thanks to Xiaopan Zhang for the
+  suggestion.
+- Define default mappings for keys 1-9 on the numerical keypad to jump to a
+  particular group (backwards with <C-kN>). Their definition is controlled by
+  the new g:mwDirectGroupJumpMappingNum variable.
 
 2.7.2	15-Oct-2012
 - Issue an error message "No marks defined" instead of moving the cursor by
