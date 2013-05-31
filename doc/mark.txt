@@ -176,12 +176,20 @@ The marks can be kept and restored across Vim sessions, using the |viminfo|
 file. For this to work, the "!" flag must be part of the 'viminfo' setting: >
     set viminfo+=!  " Save and restore global variables.
 <								   *:MarkLoad*
-:MarkLoad		Restore the marks from the previous Vim session. All
+:MarkLoad 		Restore the marks from the previous Vim session. All
+			current marks are discarded.
+:MarkLoad {slot}	Restore the marks stored in the named {slot}. All
 			current marks are discarded.
 								   *:MarkSave*
 :MarkSave		Save the currently defined marks (or clear the
 			persisted marks if no marks are currently defined) for
 			use in a future Vim session.
+:MarkSave {slot}	Save the currently defined marks in the named {slot}.
+			If {slot} is all UPPERCASE, the marks are persisted
+			and can be |:MarkLoad|ed in a future Vim session;
+			otherwise, you can just recall within the current
+			session. When no marks are currently defined, the
+			{slot} is cleared.
 
 By default, automatic persistence is enabled (so you don't need to explicitly
 |:MarkSave|), but you have to explicitly load the persisted marks in a new Vim
@@ -398,9 +406,6 @@ TODO								   *mark-todo*
 
 IDEAS								  *mark-ideas*
 
-- Allow passing a name to :MarkLoad / :MarkSave, persist in g:MARK_{NAME}, to
-  have multiple slots.
-
 ==============================================================================
 HISTORY								*mark-history*
 
@@ -417,6 +422,9 @@ HISTORY								*mark-history*
 - Define default mappings for keys 1-9 on the numerical keypad to jump to a
   particular group (backwards with <C-kN>). Their definition is controlled by
   the new g:mwDirectGroupJumpMappingNum variable.
+- ENH: Allow to store an arbitrary number of marks via named slots that can
+  optionally be passed to :MarkLoad / :MarkSave. If the slot is all-uppercase,
+  the marks will also be persisted across Vim invocations.
 
 2.7.2	15-Oct-2012
 - Issue an error message "No marks defined" instead of moving the cursor by
