@@ -15,7 +15,12 @@
 " 29-May-2013, Ingo Karkat
 " - Factor out s:HasVariablePersistence() and include the note in :MarkLoad,
 "   too.
-" - Use s:ErrorMsg() everywhere.
+" - Use s:ErrorMsg() everywhere, and allow to suppress the output via optional
+"   flag.
+" - Define s:WarningMsg(), too; we now issue them in two locations.
+" - ENH: mark#LoadCommand() and mark#SaveCommand() now take an optional marks
+"   variable name to store multiple named marks (and persist them if the name is
+"   all uppercase). Allow completion via mark#MarksVariablesComplete().
 "
 " 31-Jan-2013, Ingo Karkat
 " - mark#MarkRegex() takes an additional a:groupNum argument to also allow a
@@ -704,10 +709,18 @@ function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 	return l:result
 endfunction
 
-function! s:ErrorMsg( text )
+function! s:ErrorMsg( text, ... )
 	let v:errmsg = a:text
+	if a:0 && ! a:1 | return | endif
+
 	echohl ErrorMsg
 	echomsg v:errmsg
+	echohl None
+endfunction
+function! s:WarningMsg( text )
+	let v:warningmsg = a:text
+	echohl WarningMsg
+	echomsg v:warningmsg
 	echohl None
 endfunction
 function! s:NoMarkErrorMessage()
@@ -909,51 +922,92 @@ function! mark#ToPatternList()
 	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0 : l:highestNonEmptyIndex])
 endfunction
 
-" :MarkLoad command.
-function! s:HasVariablePersistence()
-	return index(split(&viminfo, ','), '!') == -1
+" Common functions for :MarkLoad and :MarkSave
+function! mark#MarksVariablesComplete( ArgLead, CmdLine, CursorPos )
+	return sort(map(filter(keys(g:), 'v:val !~# "^MARK_\\%(MARKS\\|ENABLED\\)$" && v:val =~# "\\V\\^MARK_' . (empty(a:ArgLead) ? '\\S' : escape(a:ArgLead, '\')) . '"'), 'v:val[5:]'))
 endfunction
-function! mark#LoadCommand( isShowMessages )
-	if exists('g:MARK_MARKS')
-		try
-			" Persistent global variables cannot be of type List, so we actually store
-			" the string representation, and eval() it back to a List.
-			execute 'let l:loadedMarkNum = mark#Load(' . g:MARK_MARKS . ', ' . (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1) . ')'
-			if a:isShowMessages
-				if l:loadedMarkNum == 0
-					echomsg 'No persistent marks defined'
-				else
-					echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's')) . (s:enabled ? '' : '; marks currently disabled')
-				endif
+function! s:HasVariablePersistence()
+	return (index(split(&viminfo, ','), '!') != -1)
+endfunction
+
+" :MarkLoad command.
+function! mark#LoadCommand( isShowMessages, ... )
+	if a:0
+		let l:marksVariable = printf('g:MARK_%s', a:1)
+		if exists(l:marksVariable)
+			let l:marks = eval(l:marksVariable)
+			let l:isEnabled = 1
+		else
+			call s:ErrorMsg('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
+			return
+		endif
+	else
+		if exists('g:MARK_MARKS')
+			let l:marks = g:MARK_MARKS
+			let l:isEnabled = (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1)
+		else
+			call s:ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
+			return
+		endif
+	endif
+
+	try
+		" Persistent global variables cannot be of type List, so we actually store
+		" the string representation, and eval() it back to a List.
+		execute printf('let l:loadedMarkNum = mark#Load(%s, %d)', l:marks, l:isEnabled)
+		if a:isShowMessages
+			if l:loadedMarkNum == 0
+				echomsg 'No persistent marks defined' . (exists('l:marksVariable') ? ' in ' . l:marksVariable : '')
+			else
+				echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's')) . (s:enabled ? '' : '; marks currently disabled')
 			endif
-		catch /^Vim\%((\a\+)\)\=:E/
-			call s:ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED')
+		endif
+	catch /^Vim\%((\a\+)\)\=:E/
+		if exists('l:marksVariable')
+			call s:ErrorMsg(printf('Corrupted persistent mark info in %s', l:marksVariable), a:isShowMessages)
+			execute 'unlet!' l:marksVariable
+		else
+			call s:ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED', a:isShowMessages)
 			unlet! g:MARK_MARKS
 			unlet! g:MARK_ENABLED
-		endtry
-	elseif a:isShowMessages
-		call s:ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
-	endif
+		endif
+	endtry
 endfunction
 
 " :MarkSave command.
-function! s:SavePattern()
+function! s:SavePattern( ... )
 	let l:savedMarks = mark#ToPatternList()
-	let g:MARK_MARKS = string(l:savedMarks)
-	let g:MARK_ENABLED = s:enabled
+
+	if a:0
+		try
+			if empty(l:savedMarks)
+				unlet! g:MARK_{a:1}
+			else
+				let g:MARK_{a:1} = string(l:savedMarks)
+			endif
+		catch /^Vim\%((\a\+)\)\=:E/
+			" v:exception contains what is normally in v:errmsg, but with extra
+			" exception source info prepended, which we cut away.
+			call s:ErrorMsg(substitute(v:exception, '^Vim\%((\a\+)\)\=:', '', ''))
+			return -1
+		endtry
+	else
+		let g:MARK_MARKS = string(l:savedMarks)
+		let g:MARK_ENABLED = s:enabled
+	endif
 	return ! empty(l:savedMarks)
 endfunction
-function! mark#SaveCommand()
+function! mark#SaveCommand( ... )
 	if ! s:HasVariablePersistence()
-		call s:ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
-		return
+		if ! a:0
+			call s:ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+		elseif a:1 =~# '^\u\+$'
+			call s:WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+		endif
 	endif
 
-	if ! s:SavePattern()
-		let v:warningmsg = 'No marks defined'
-		echohl WarningMsg
-		echomsg v:warningmsg
-		echohl None
+	if ! call('s:SavePattern', a:000)
+		call s:WarningMsg('No marks defined')
 	endif
 endfunction
 
