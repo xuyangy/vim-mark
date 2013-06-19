@@ -409,7 +409,7 @@ IDEAS								  *mark-ideas*
 ==============================================================================
 HISTORY								*mark-history*
 
-2.8.0	RELEASEME
+2.8.0	01-Jun-2013
 - Also allow a [count] for <Leader>r to select (or query for) a mark group, as
   with <Leader>m.
 - CHG: Also set the current mark to the used mark group when a mark was set
