@@ -988,7 +988,7 @@ function! s:SavePattern( ... )
 		catch /^Vim\%((\a\+)\)\=:E/
 			" v:exception contains what is normally in v:errmsg, but with extra
 			" exception source info prepended, which we cut away.
-			call s:ErrorMsg(substitute(v:exception, '^Vim\%((\a\+)\)\=:', '', ''))
+			call s:ErrorMsg(substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', ''))
 			return -1
 		endtry
 	else
