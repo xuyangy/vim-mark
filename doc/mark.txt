@@ -50,6 +50,8 @@ RELATED WORKS								     *
 - Highlight (http://www.drchip.org/astronaut/vim/index.html#HIGHLIGHT) has
   commands and mappings for highlighting and searching, uses matchadd(), but
   limits the scope of highlightings to the current window.
+- TempKeyword (vimscript #4636) is a simple plugin that can matchadd() the
+  word under the cursor with \0 - \9 mappings. (And clear with \c0 etc.)
 
 ==============================================================================
 USAGE								  *mark-usage*
