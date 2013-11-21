@@ -52,6 +52,8 @@ RELATED WORKS								     *
   limits the scope of highlightings to the current window.
 - TempKeyword (vimscript #4636) is a simple plugin that can matchadd() the
   word under the cursor with \0 - \9 mappings. (And clear with \c0 etc.)
+- simple_highlighting (vimscript #4688) has commands and mappings to highlight
+  8 different slots in all buffers.
 
 ==============================================================================
 USAGE								  *mark-usage*
@@ -649,7 +651,7 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2005-2008 Yuheng Xie
+Copyright: (C) 2005-2013 Yuheng Xie
            (C) 2008-2012 Ingo Karkat
 The VIM LICENSE applies to this plugin; see |copyright|.
 
