@@ -414,7 +414,7 @@ IDEAS								  *mark-ideas*
 ==============================================================================
 HISTORY								*mark-history*
 
-2.8.1	RELEASEME
+2.8.1	22-Nov-2013
 - Allow to override the adding to existing marks via :[N]Mark! {pattern}.
 - ENH: Implement command completion for :[N]Mark that offers existing mark
   patterns (from group [N] / all groups), both as one regular expression and
@@ -651,8 +651,8 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2005-2013 Yuheng Xie
-           (C) 2008-2012 Ingo Karkat
+Copyright: (C) 2008-2013 Ingo Karkat
+           (C) 2005-2008 Yuheng Xie
 The VIM LICENSE applies to this plugin; see |copyright|.
 
 Maintainer:	Ingo Karkat <ingo@karkat.de>
