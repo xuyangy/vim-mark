@@ -54,6 +54,8 @@ RELATED WORKS								     *
   word under the cursor with \0 - \9 mappings. (And clear with \c0 etc.)
 - simple_highlighting (vimscript #4688) has commands and mappings to highlight
   8 different slots in all buffers.
+- searchmatch (vimscript #4869) has commands and mappings for :[1,2,3]match,
+  in the current window only.
 
 ==============================================================================
 USAGE								  *mark-usage*
@@ -655,7 +657,7 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2008-2013 Ingo Karkat
+Copyright: (C) 2008-2014 Ingo Karkat
            (C) 2005-2008 Yuheng Xie
 The VIM LICENSE applies to this plugin; see |copyright|.
 
