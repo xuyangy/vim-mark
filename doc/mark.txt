@@ -286,8 +286,8 @@ their number via: >
 <
 							*mark-colors-redefine*
 If none of the default highlightings suits you, define your own colors in your
-vimrc file (or anywhere before this plugin is sourced), in the following form
-(where N = 1..): >
+vimrc file (or anywhere before this plugin is sourced, but after any
+|:colorscheme|), in the following form (where N = 1..): >
     highlight MarkWordN ctermbg=Cyan ctermfg=Black guibg=#8CCBEA guifg=Black
 You can also use this form to redefine only some of the default highlightings.
 If you want to avoid losing the highlightings on |:colorscheme| commands, you
