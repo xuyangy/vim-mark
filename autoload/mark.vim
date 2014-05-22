@@ -1,7 +1,7 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2008-2013 Ingo Karkat
+" Copyright:   (C) 2008-2014 Ingo Karkat
 "              (C) 2005-2008 Yuheng Xie
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
@@ -971,7 +971,7 @@ function! mark#LoadCommand( isShowMessages, ... )
 				echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's')) . (s:enabled ? '' : '; marks currently disabled')
 			endif
 		endif
-	catch /^Vim\%((\a\+)\)\=:E/
+	catch /^Vim\%((\a\+)\)\=:/
 		if exists('l:marksVariable')
 			call s:ErrorMsg(printf('Corrupted persistent mark info in %s', l:marksVariable), a:isShowMessages)
 			execute 'unlet!' l:marksVariable
@@ -994,7 +994,7 @@ function! s:SavePattern( ... )
 			else
 				let g:MARK_{a:1} = string(l:savedMarks)
 			endif
-		catch /^Vim\%((\a\+)\)\=:E/
+		catch /^Vim\%((\a\+)\)\=:/
 			" v:exception contains what is normally in v:errmsg, but with extra
 			" exception source info prepended, which we cut away.
 			call s:ErrorMsg(substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', ''))
