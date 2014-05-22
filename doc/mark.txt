@@ -34,6 +34,15 @@ plugin offers the following advantages over the original:
 - Marks can be persisted, and patterns can be added / subtracted from
   mark highlight groups.
 
+SEE ALSO								     *
+
+- SearchAlternatives.vim (vimscript #4146) provides mappings and commands to
+  add and subtract alternative branches to the current search pattern.
+- SearchHighlighting.vim (vimscript #4320) can change the semantics of the
+  start command *, extends it to visual mode (like Mark) and has auto-search
+  functionality which instantly highlights the word under the cursor when
+  typing or moving around, like in many IDEs.
+
 RELATED WORKS								     *
 
 - MultipleSearch (vimscript #479) can highlight in a single window and in all
