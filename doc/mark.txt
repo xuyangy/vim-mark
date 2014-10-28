@@ -420,7 +420,7 @@ IDEAS								  *mark-ideas*
 ==============================================================================
 HISTORY								*mark-history*
 
-2.8.4	RELEASEME
+2.8.4	19-Jun-2014
 - To avoid accepting an invalid regular expression (e.g. "\(blah") and then
   causing ugly errors on every mark update, check the patterns passed by the
   user for validity.
