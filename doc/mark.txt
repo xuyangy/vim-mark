@@ -423,6 +423,10 @@ IDEAS								  *mark-ideas*
 ==============================================================================
 HISTORY								*mark-history*
 
+2.8.6	RELEASEME
+- ENH: Keep previous (last accessed) window on :windo.
+- Consistently use :noautocmd during window iteration.
+
 2.8.5	29-Oct-2014
 - ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
   like <Plug>MarkAllClear, but with confirmation. Thanks to Marcelo Montu for
@@ -684,7 +688,7 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2008-2014 Ingo Karkat
+Copyright: (C) 2008-2015 Ingo Karkat
            (C) 2005-2008 Yuheng Xie
 The VIM LICENSE applies to this plugin; see |copyright|.
 
