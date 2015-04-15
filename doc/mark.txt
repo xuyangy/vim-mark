@@ -221,9 +221,9 @@ static values, e.g. by including this in |vimrc|: >
     5Mark foo
     6Mark bar
 Or you can define custom commands that preset certain marks: >
-    command -bar MyMarks silent MarkClear | execute '5Mark foo' | execute '6Mark bar'
+    command -bar MyMarks exe '5Mark! foo' | exe '6Mark! bar'
 Or a command that adds to the existing marks and then toggles them: >
-    command -bar ToggleFooBarMarks execute 'Mark foo' | execute 'Mark bar'
+    command -bar ToggleFooBarMarks exe 'Mark foo' | exe 'Mark bar'
 <
 MARK INFORMATION					    *mark-information*
 
