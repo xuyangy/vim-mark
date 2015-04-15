@@ -1,7 +1,7 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2008-2014 Ingo Karkat
+" Copyright:   (C) 2008-2015 Ingo Karkat
 "              (C) 2005-2008 Yuheng Xie
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
@@ -10,8 +10,12 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.8.4
+" Version:     2.8.6
 " Changes:
+" 30-Jan-2015, Ingo Karkat
+" - ENH: Keep previous (last accessed) window on :windo.
+" - Consistently use :noautocmd during window iteration.
+"
 " 16-Jun-2014, Ingo Karkat
 " - To avoid accepting an invalid regular expression (e.g. "\(blah") and then
 "   causing ugly errors on every mark update, check the patterns passed by the
@@ -411,28 +415,28 @@ function! mark#UpdateMark()
 endfunction
 " Set / clear matches in all windows.
 function! s:MarkScope( indices, expr )
-	let l:currentWinNr = winnr()
-
 	" By entering a window, its height is potentially increased from 0 to 1 (the
 	" minimum for the current window). To avoid any modification, save the window
 	" sizes and restore them after visiting all windows.
 	let l:originalWindowLayout = winrestcmd()
-
-	noautocmd windo call s:MarkMatch(a:indices, a:expr)
-	execute l:currentWinNr . 'wincmd w'
+		let l:originalWinNr = winnr()
+		let l:previousWinNr = winnr('#') ? winnr('#') : 1
+			noautocmd windo call s:MarkMatch(a:indices, a:expr)
+		noautocmd execute l:previousWinNr . 'wincmd w'
+		noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
 endfunction
 " Update matches in all windows.
 function! mark#UpdateScope()
-	let l:currentWinNr = winnr()
-
 	" By entering a window, its height is potentially increased from 0 to 1 (the
 	" minimum for the current window). To avoid any modification, save the window
 	" sizes and restore them after visiting all windows.
 	let l:originalWindowLayout = winrestcmd()
-
-	noautocmd windo call mark#UpdateMark()
-	execute l:currentWinNr . 'wincmd w'
+		let l:originalWinNr = winnr()
+		let l:previousWinNr = winnr('#') ? winnr('#') : 1
+			noautocmd windo call mark#UpdateMark()
+		noautocmd execute l:previousWinNr . 'wincmd w'
+		noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout
 endfunction
 
