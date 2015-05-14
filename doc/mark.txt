@@ -224,6 +224,18 @@ Or you can define custom commands that preset certain marks: >
     command -bar MyMarks exe '5Mark! foo' | exe '6Mark! bar'
 Or a command that adds to the existing marks and then toggles them: >
     command -bar ToggleFooBarMarks exe 'Mark foo' | exe 'Mark bar'
+The following commands help with setting these up:
+			 *:MarkYankDefinitions* *:MarkYankDefinitionsOneLiner*
+:MarkYankDefinitions [x]
+			Place definitions for all current marks into the
+			default register / [x], like this: >
+			    1Mark! foo
+			    2Mark! bar
+			    9Mark! quux
+:MarkYankDefinitionsOneLiner [x]
+			Like |:MarkYankDefinitions|, but place all definitions
+			into a single line, like this: >
+			exe '1Mark! foo' | exe '2Mark! bar' | exe '9Mark! quux'
 <
 MARK INFORMATION					    *mark-information*
 
@@ -426,6 +438,11 @@ HISTORY								*mark-history*
 2.8.6	RELEASEME
 - ENH: Keep previous (last accessed) window on :windo.
 - Consistently use :noautocmd during window iteration.
+- ENH: Add :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
+  These make it easier to persist marks for specific files (e.g. by putting
+  the :Mark commands into a local vimrc) or occasions (by defining a custom
+  command or mapping with these commands), and are an alternative to
+  :MarkSave/Load.
 
 2.8.5	29-Oct-2014
 - ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
