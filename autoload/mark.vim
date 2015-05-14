@@ -12,9 +12,6 @@
 "
 " Version:     2.8.6
 " Changes:
-" 15-May-2015, Ingo Karkat
-" - ENH: Add mark#SearchNextGroup().
-"
 " 16-Apr-2015, Ingo Karkat
 " - ENH: Add mark#YankDefinitions().
 "
@@ -361,30 +358,6 @@ function! s:FreeGroupIndex()
 		endif
 		let i += 1
 	endwhile
-	return -1
-endfunction
-function! s:NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
-	if a:isBackward
-		let l:indices = range(a:startIndex - 1, 0, -1)
-		if a:isWrapAround
-			let l:indices += range(s:markNum - 1, a:startIndex + 1, -1) :
-		endif
-	else
-		let l:indices = range(a:startIndex + 1, s:markNum - 1)
-		if a:isWrapAround
-			let l:indices += range(0, max([-1, a:startIndex - 1]))
-		endif
-	endif
-
-	let l:count = a:count
-	for l:i in l:indices
-		if ! empty(s:pattern[l:i])
-			let l:count -= 1
-			if l:count == 0
-				return l:i
-			endif
-		endif
-	endfor
 	return -1
 endfunction
 
@@ -800,29 +773,6 @@ function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 	return l:result
 endfunction
 
-function! mark#SearchNextGroup( count, isBackward )
-	if s:lastSearch == -1
-		" Fall back to current mark in case of no last search.
-		let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
-		if empty(l:markText)
-			" Fall back to next group that would be taken.
-			let l:groupIndex = s:GetNextGroupIndex()
-		else
-			let l:groupIndex = l:markIndex
-		endif
-	else
-		let l:groupIndex = s:lastSearch
-	endif
-
-	let l:groupIndex = s:NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
-	if l:groupIndex == -1
-		call s:ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
-		return 0
-	endif
-	return mark#SearchGroupMark(l:groupIndex + 1, 1, a:isBackward, 1)
-endfunction
-
-
 function! s:ErrorMsg( text, ... )
 	let v:errmsg = a:text
 	if a:0 && ! a:1 | return | endif
@@ -1002,81 +952,6 @@ function! mark#SearchNext( isBackward, ... )
 	" <Plug>MarkSearchCurrentNext / <Plug>MarkSearchAnyNext.
 	call call(a:0 ? a:1 : (s:lastSearch == -1 ? 'mark#SearchAnyMark' : 'mark#SearchCurrentMark'), [a:isBackward])
 	return 1
-endfunction
-
-" Search cascading mark groups.
-let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex] = [[], [], -1]
-function! s:GetLocation()
-	return [tabpagenr(), winnr(), bufnr('')]
-endfunction
-function! s:SetCascade()
-	let s:cascadingLocation = s:GetLocation()
-	let [l:markText, s:cascadingPosition, s:cascadingGroupIndex] = mark#CurrentMark()
-endfunction
-function! mark#StartCascade( count )
-	" Try passed mark group, current mark, last search, first used mark group, in that order.
-
-	if ! a:count
-		call s:SetCascade()
-		if s:cascadingGroupIndex != -1
-			" We're already on a mark. Take that as the start and proceed to
-			" then next match already.
-			return mark#SearchNextCascade(1, 0)
-		endif
-	endif
-
-	" Search for next mark and start cascaded search there.
-	if ! mark#SearchGroupMark(a:count, 1, 0, 1)
-		if a:count
-			return 0
-		elseif ! mark#SearchGroupMark(s:NextUsedGroupIndex(0, 0, -1, 1) + 1, 1, 0, 1)
-			call s:NoMarkErrorMessage()
-			return 0
-		endif
-	endif
-	call s:SetCascade()
-	return 1
-endfunction
-function! mark#SearchNextCascade( count, isBackward, ... )
-	if s:cascadingGroupIndex == -1
-		call s:ErrorMsg('No cascaded search defined')
-		return 0
-	endif
-
-	let l:save_wrapscan = &wrapscan
-	set wrapscan
-	try
-		if ! mark#SearchGroupMark(s:cascadingGroupIndex + 1, a:count, a:isBackward, 1)
-			let s:cascadingGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
-			if s:cascadingGroupIndex == -1
-				call s:ErrorMsg('Cascaded search ended with last used group')
-				return 0
-			endif
-
-			return mark#SearchNextCascade(a:count, a:isBackward, 1) " Indicate update of cascade via additional parameter.
-		endif
-		if s:cascadingLocation == s:GetLocation()
-			if s:cascadingPosition == getpos('.')[1:2]
-				" We're returned to the first match from that group. Now cascade
-				" to the next one.
-				let s:cascadingGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
-				if s:cascadingGroupIndex == -1
-					call s:ErrorMsg('Cascaded search ended with last used group')
-					return 0
-				endif
-
-				return mark#SearchNextCascade(a:count, a:isBackward, 1) " Indicate update of cascade via additional parameter.
-			elseif a:0  " And handle the update here.
-				call s:SetCascade()
-			endif
-		else
-			call s:SetCascade()
-		endif
-
-		return 1
-	finally
-		let &wrapscan = l:save_wrapscan
-	endtry
 endfunction
 
 " Load mark patterns from list.
