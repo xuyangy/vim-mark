@@ -1,7 +1,7 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2008-2014 Ingo Karkat
+" Copyright:   (C) 2008-2015 Ingo Karkat
 "              (C) 2005-2008 Yuheng Xie
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
@@ -14,8 +14,15 @@
 "  - mark.vim autoload script
 "  - mark/palettes.vim autoload script for additional palettes
 "
-" Version:     2.8.5
+" Version:     2.8.6
 " Changes:
+" 15-May-2015, Ingo Karkat
+" - ENH: Add <Plug>MarkSearchUsedGroupNext and <Plug>MarkSearchUsedGroupPrev to
+"   search in a next / previous used group. Suggested by Louis Pan.
+"
+" 16-Apr-2015, Ingo Karkat
+" - ENH: Add :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
+"
 " 29-Oct-2014, Ingo Karkat
 " - ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
 "   like <Plug>MarkAllClear, but with confirmation. Thanks to Marcelo Montu for
@@ -354,14 +361,18 @@ nnoremap <silent> <Plug>MarkSearchAnyNext     :<C-u>call mark#SearchAnyMark(0)<C
 nnoremap <silent> <Plug>MarkSearchAnyPrev     :<C-u>call mark#SearchAnyMark(1)<CR>
 " When typed, [*#nN] open the fold at the search result, but inside a mapping or
 " :normal this must be done explicitly via 'zv'.
-nnoremap <silent> <Plug>MarkSearchNext        :<C-u>if !mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchPrev        :<C-u>if !mark#SearchNext(1)<Bar>execute 'normal! #zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchOrCurNext   :<C-u>if !mark#SearchNext(0,'mark#SearchCurrentMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchOrCurPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchOrAnyNext   :<C-u>if !mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchOrAnyPrev   :<C-u>if !mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
-nnoremap <silent> <Plug>MarkSearchGroupNext   :<C-u>call mark#SearchGroupMark(v:count, 1, 0, 1)<CR>
-nnoremap <silent> <Plug>MarkSearchGroupPrev   :<C-u>call mark#SearchGroupMark(v:count, 1, 1, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchNext          :<C-u>if !mark#SearchNext(0)<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchPrev          :<C-u>if !mark#SearchNext(1)<Bar>execute 'normal! #zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrCurNext     :<C-u>if !mark#SearchNext(0,'mark#SearchCurrentMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrCurPrev     :<C-u>if !mark#SearchNext(1,'mark#SearchCurrentMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrAnyNext     :<C-u>if !mark#SearchNext(0,'mark#SearchAnyMark')<Bar>execute 'normal! *zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchOrAnyPrev     :<C-u>if !mark#SearchNext(1,'mark#SearchAnyMark')<Bar>execute 'normal! #zv'<Bar>endif<CR>
+nnoremap <silent> <Plug>MarkSearchGroupNext     :<C-u>call mark#SearchGroupMark(v:count, 1, 0, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchGroupPrev     :<C-u>call mark#SearchGroupMark(v:count, 1, 1, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchUsedGroupNext	:<C-u>call mark#SearchNextGroup(v:count1, 0)<CR>
+nnoremap <silent> <Plug>MarkSearchUsedGroupPrev	:<C-u>call mark#SearchNextGroup(v:count1, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeStart  :<C-u>call mark#StartCascade(v:count)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeNext   :<C-u>call mark#SearchNextCascade(v:count1, 0)<CR>
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
@@ -408,6 +419,8 @@ endif
 " No default mapping for <Plug>MarkSearchOrAnyPrev
 " No default mapping for <Plug>MarkSearchGroupNext
 " No default mapping for <Plug>MarkSearchGroupPrev
+" No default mapping for <Plug>MarkSearchUsedGroupNext
+" No default mapping for <Plug>MarkSearchUsedGroupPrev
 
 function! s:MakeDirectGroupMappings()
 	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
@@ -433,6 +446,8 @@ command! -bar Marks call mark#List()
 
 command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad call mark#LoadCommand(1, <f-args>)
 command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave call mark#SaveCommand(<f-args>)
+command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr 'No marks defined' | endif
+command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr 'No marks defined' | endif
 function! s:SetPalette( paletteName )
 	if type(g:mwDefaultHighlightingPalette) == type([])
 		" Convert the directly defined list to a palette named "default".
