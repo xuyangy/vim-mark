@@ -363,9 +363,21 @@ function! s:FreeGroupIndex()
 	endwhile
 	return -1
 endfunction
-function! s:NextUsedGroupIndex( isBackward, startIndex, count )
+function! s:NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
+	if a:isBackward
+		let l:indices = range(a:startIndex - 1, 0, -1)
+		if a:isWrapAround
+			let l:indices += range(s:markNum - 1, a:startIndex + 1, -1) :
+		endif
+	else
+		let l:indices = range(a:startIndex + 1, s:markNum - 1)
+		if a:isWrapAround
+			let l:indices += range(0, max([-1, a:startIndex - 1]))
+		endif
+	endif
+
 	let l:count = a:count
-	for l:i in (a:isBackward ? range(a:startIndex - 1, 0, -1) + range(s:markNum - 1, a:startIndex + 1, -1) : range(a:startIndex + 1, s:markNum - 1) + range(0, a:startIndex - 1))
+	for l:i in l:indices
 		if ! empty(s:pattern[l:i])
 			let l:count -= 1
 			if l:count == 0
@@ -802,7 +814,7 @@ function! mark#SearchNextGroup( count, isBackward )
 		let l:groupIndex = s:lastSearch
 	endif
 
-	let l:groupIndex = s:NextUsedGroupIndex(a:isBackward, l:groupIndex, a:count)
+	let l:groupIndex = s:NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
 	if l:groupIndex == -1
 		call s:ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
 		return 0
@@ -991,6 +1003,91 @@ function! mark#SearchNext( isBackward, ... )
 	call call(a:0 ? a:1 : (s:lastSearch == -1 ? 'mark#SearchAnyMark' : 'mark#SearchCurrentMark'), [a:isBackward])
 	return 1
 endfunction
+
+" Search cascading mark groups.
+let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex, s:cascadingStop] = [[], [], -1, 0]
+function! s:GetLocation()
+	return [tabpagenr(), winnr(), bufnr('')]
+endfunction
+function! s:SetCascade()
+	let s:cascadingLocation = s:GetLocation()
+	let [l:markText, s:cascadingPosition, s:cascadingGroupIndex] = mark#CurrentMark()
+endfunction
+function! mark#StartCascade( count, isStopBeforeCascade )
+	" Try passed mark group, current mark, last search, first used mark group, in that order.
+
+	if ! a:count
+		call s:SetCascade()
+		if s:cascadingGroupIndex != -1
+			" We're already on a mark. Take that as the start and proceed to
+			" then next match already.
+			return mark#SearchNextCascade(1, a:isStopBeforeCascade, 0)
+		endif
+	endif
+
+	" Search for next mark and start cascaded search there.
+	if ! mark#SearchGroupMark(a:count, 1, 0, 1)
+		if a:count
+			return 0
+		elseif ! mark#SearchGroupMark(s:NextUsedGroupIndex(0, 0, -1, 1) + 1, 1, 0, 1)
+			call s:NoMarkErrorMessage()
+			return 0
+		endif
+	endif
+	call s:SetCascade()
+	return 1
+endfunction
+function! mark#SearchNextCascade( count, isStopBeforeCascade, isBackward )
+	if s:cascadingGroupIndex == -1
+		call s:ErrorMsg('No cascaded search defined')
+		return 0
+	elseif s:cascadingStop
+		let s:cascadingStop = 0
+		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
+	endif
+
+	let l:save_wrapscan = &wrapscan
+	set wrapscan
+	let l:save_view = winsaveview()
+	try
+		if ! mark#SearchGroupMark(s:cascadingGroupIndex + 1, a:count, a:isBackward, 1)
+			return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
+		endif
+		if s:cascadingLocation == s:GetLocation()
+			if s:cascadingPosition == getpos('.')[1:2]
+				" We're returned to the first match from that group. Undo that
+				" last jump, and then cascade to the next one.
+				call winrestview(l:save_view)
+				return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
+			endif
+		endif
+
+		if empty(s:cascadingLocation) && empty(s:cascadingPosition)
+			call s:SetCascade()
+		endif
+
+		return 1
+	finally
+		let &wrapscan = l:save_wrapscan
+	endtry
+endfunction
+function! s:Cascade( count, isStopBeforeCascade, isBackward )
+	let s:cascadingGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
+	if s:cascadingGroupIndex == -1
+		call s:ErrorMsg('Cascaded search ended with last used group')
+		return 0
+	endif
+
+	if a:isStopBeforeCascade
+		let s:cascadingStop = 1
+		call s:WarningMsg('Cascaded search reached last match of current group')
+		return 1
+	else
+		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
+		return mark#SearchNextCascade(a:count, a:isStopBeforeCascade, a:isBackward)
+	endif
+endfunction
+
 
 " Load mark patterns from list.
 function! mark#Load( pattern, enabled )
