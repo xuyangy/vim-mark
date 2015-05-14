@@ -12,6 +12,12 @@
 "
 " Version:     2.8.6
 " Changes:
+" 15-May-2015, Ingo Karkat
+" - ENH: Add mark#SearchNextGroup().
+"
+" 16-Apr-2015, Ingo Karkat
+" - ENH: Add mark#YankDefinitions().
+"
 " 30-Jan-2015, Ingo Karkat
 " - ENH: Keep previous (last accessed) window on :windo.
 " - Consistently use :noautocmd during window iteration.
@@ -247,6 +253,8 @@
 "
 " 02-Jul-2009, Ingo Karkat
 " - Split off functions into autoload script.
+let s:save_cpo = &cpo
+set cpo&vim
 
 "- functions ------------------------------------------------------------------
 
@@ -355,6 +363,30 @@ function! s:FreeGroupIndex()
 		endif
 		let i += 1
 	endwhile
+	return -1
+endfunction
+function! s:NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
+	if a:isBackward
+		let l:indices = range(a:startIndex - 1, 0, -1)
+		if a:isWrapAround
+			let l:indices += range(s:markNum - 1, a:startIndex + 1, -1) :
+		endif
+	else
+		let l:indices = range(a:startIndex + 1, s:markNum - 1)
+		if a:isWrapAround
+			let l:indices += range(0, max([-1, a:startIndex - 1]))
+		endif
+	endif
+
+	let l:count = a:count
+	for l:i in l:indices
+		if ! empty(s:pattern[l:i])
+			let l:count -= 1
+			if l:count == 0
+				return l:i
+			endif
+		endif
+	endfor
 	return -1
 endfunction
 
@@ -770,6 +802,29 @@ function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 	return l:result
 endfunction
 
+function! mark#SearchNextGroup( count, isBackward )
+	if s:lastSearch == -1
+		" Fall back to current mark in case of no last search.
+		let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+		if empty(l:markText)
+			" Fall back to next group that would be taken.
+			let l:groupIndex = s:GetNextGroupIndex()
+		else
+			let l:groupIndex = l:markIndex
+		endif
+	else
+		let l:groupIndex = s:lastSearch
+	endif
+
+	let l:groupIndex = s:NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
+	if l:groupIndex == -1
+		call s:ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
+		return 0
+	endif
+	return mark#SearchGroupMark(l:groupIndex + 1, 1, a:isBackward, 1)
+endfunction
+
+
 function! s:ErrorMsg( text, ... )
 	let v:errmsg = a:text
 	if a:0 && ! a:1 | return | endif
@@ -951,6 +1006,67 @@ function! mark#SearchNext( isBackward, ... )
 	return 1
 endfunction
 
+" Search cascading mark groups.
+let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex] = [[], [], 0]
+function! s:GetLocation()
+	return [tabpagenr(), winnr(), bufnr('')]
+endfunction
+function! s:SetCascade()
+	let s:cascadingLocation = s:GetLocation()
+	let [l:markText, s:cascadingPosition, s:cascadingGroupIndex] = mark#CurrentMark()
+endfunction
+function! mark#StartCascade( count )
+	" Try passed mark group, current mark, last search, first used mark group, in that order.
+
+	if ! a:count
+		call s:SetCascade()
+		if s:cascadingGroupIndex != -1
+			" We're already on a mark. Take that as the start and proceed to
+			" then next match already.
+			return mark#SearchNextCascade(1, 0)
+		endif
+	endif
+
+	" Search for next mark and start cascaded search there.
+	if ! mark#SearchGroupMark(a:count, 1, 0, 1)
+		if ! mark#SearchGroupMark(s:NextUsedGroupIndex(0, 0, -1, 1) + 1, 1, 0, 1)
+			return 0
+		endif
+	endif
+	call s:SetCascade()
+	return 1
+endfunction
+function! mark#SearchNextCascade( count, isBackward, ... )
+	let l:save_wrapscan = &wrapscan
+	set wrapscan
+	try
+		if ! mark#SearchGroupMark(s:cascadingGroupIndex + 1, a:count, a:isBackward, 1)
+			return 0
+		endif
+		if s:cascadingLocation == s:GetLocation()
+			if s:cascadingPosition == getpos('.')[1:2]
+				" We're returned to the first match from that group. Now cascade
+				" to the next one.
+				let s:cascadingGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
+				if s:cascadingGroupIndex == -1
+					call s:ErrorMsg('Cascaded search ended with last used group')
+					return 0
+				endif
+
+				return mark#SearchNextCascade(a:count, a:isBackward, 1) " Indicate update of cascade via additional parameter.
+			elseif a:0  " And handle the update here.
+				call s:SetCascade()
+			endif
+		else
+			call s:SetCascade()
+		endif
+
+		return 1
+	finally
+		let &wrapscan = l:save_wrapscan
+	endtry
+endfunction
+
 " Load mark patterns from list.
 function! mark#Load( pattern, enabled )
 	if s:markNum > 0 && len(a:pattern) > 0
@@ -1070,6 +1186,26 @@ function! mark#SaveCommand( ... )
 	if ! call('s:SavePattern', a:000)
 		call s:WarningMsg('No marks defined')
 	endif
+endfunction
+
+" :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
+function! mark#YankDefinitions( isOneLiner, register )
+	let l:marks = mark#ToPatternList()
+	if empty(l:marks)
+		return 0
+	endif
+
+	let l:commands = []
+	for l:i in range(len(l:marks))
+		if ! empty(l:marks[l:i])
+			call add(l:commands, printf('%dMark! %s', l:i + 1, l:marks[l:i]))
+		endif
+	endfor
+
+	let l:command = (a:isOneLiner ? join(map(l:commands, '"exe " . string(v:val)'), ' | ') : join(l:commands, "\n"))
+	call setreg(a:register, l:command)
+
+	return 1
 endfunction
 
 
@@ -1252,4 +1388,6 @@ else
 	call mark#UpdateScope()
 endif
 
+let &cpo = s:save_cpo
+unlet s:save_cpo
 " vim: ts=4 sts=0 sw=4 noet
