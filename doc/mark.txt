@@ -185,6 +185,8 @@ it's not the last mark used.
 			Note that these commands only work when the "Num Lock"
 			indicator of your keyboard is ON; otherwise, the
 			keypad is used for cursor movement.
+Alternatively, you can set up mappings to search in a next / previous used
+group, see |mark-group-cycle|.
 
 MARK PERSISTENCE					    *mark-persistence*
 
@@ -392,7 +394,12 @@ If you need more / less groups, this can be configured via: >
     let g:mwDirectGroupJumpMappingNum = 20
 Set to 0 to completely turn off the keypad mappings. This is easier than
 remapping all <Plug>-mappings.
-
+							    *mark-group-cycle*
+As an alternative to the direct group searches, you can also define mappings
+that search a next / previous used group: >
+    nmap <Leader>+* <Plug>MarkSearchUsedGroupNext
+    nmap <Leader>-* <Plug>MarkSearchUsedGroupPrev
+<
 						 *mark-whitespace-indifferent*
 Some people like to create a mark based on the visual selection, like
 |v_<Leader>m|, but have whitespace in the selection match any whitespace when
@@ -443,6 +450,8 @@ HISTORY								*mark-history*
   the :Mark commands into a local vimrc) or occasions (by defining a custom
   command or mapping with these commands), and are an alternative to
   :MarkSave/Load.
+- ENH: Add <Plug>MarkSearchUsedGroupNext and <Plug>MarkSearchUsedGroupPrev to
+  search in a next / previous used group. Suggested by Louis Pan.
 
 2.8.5	29-Oct-2014
 - ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
