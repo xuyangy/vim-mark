@@ -13,9 +13,16 @@
 "  - Requires Vim 7.1 with "matchadd()", or Vim 7.2 or higher.
 "  - mark.vim autoload script
 "  - mark/palettes.vim autoload script for additional palettes
+"  - mark/cascade.vim autoload script for cascading search
 "
-" Version:     2.8.6
+" Version:     2.9.0
 " Changes:
+" 16-May-2015, Ingo Karkat
+" - ENH: Add <Plug>MarkSearchCascadeStartWithStop,
+"   <Plug>MarkSearchCascadeNextWithStop, <Plug>MarkSearchCascadeStartNoStop,
+"   <Plug>MarkSearchCascadeNextNoStop to search in cascading mark groups, i.e.
+"   first all matches for group 1, then all for group 2, and so on.
+"
 " 15-May-2015, Ingo Karkat
 " - ENH: Add <Plug>MarkSearchUsedGroupNext and <Plug>MarkSearchUsedGroupPrev to
 "   search in a next / previous used group. Suggested by Louis Pan.
@@ -371,6 +378,13 @@ nnoremap <silent> <Plug>MarkSearchGroupNext     :<C-u>call mark#SearchGroupMark(
 nnoremap <silent> <Plug>MarkSearchGroupPrev     :<C-u>call mark#SearchGroupMark(v:count, 1, 1, 1)<CR>
 nnoremap <silent> <Plug>MarkSearchUsedGroupNext	:<C-u>call mark#SearchNextGroup(v:count1, 0)<CR>
 nnoremap <silent> <Plug>MarkSearchUsedGroupPrev	:<C-u>call mark#SearchNextGroup(v:count1, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeStartWithStop  :<C-u>call mark#cascade#Start(v:count, 1)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeNextWithStop   :<C-u>call mark#cascade#Next(v:count1, 1, 0)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeStartNoStop    :<C-u>call mark#cascade#Start(v:count, 0)<CR>
+nnoremap <silent> <Plug>MarkSearchCascadeNextNoStop     :<C-u>call mark#cascade#Next(v:count1, 0, 0)<CR>
+" TODO
+nmap <Leader><F2> <Plug>MarkSearchCascadeStartWithStop
+nmap <F2> <Plug>MarkSearchCascadeNextWithStop
 
 
 if !hasmapto('<Plug>MarkSet', 'n')
