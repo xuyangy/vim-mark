@@ -1,3 +1,4 @@
 autoload/mark.vim
+autoload/mark/palettes.vim
 plugin/mark.vim
 doc/mark.txt
