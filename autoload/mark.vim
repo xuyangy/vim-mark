@@ -1005,7 +1005,7 @@ function! mark#SearchNext( isBackward, ... )
 endfunction
 
 " Search cascading mark groups.
-let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex, s:cascadingStop] = [[], [], -1, 0]
+let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex, s:cascadingStop] = [[], [], -1, -1]
 function! s:GetLocation()
 	return [tabpagenr(), winnr(), bufnr('')]
 endfunction
@@ -1041,8 +1041,15 @@ function! mark#SearchNextCascade( count, isStopBeforeCascade, isBackward )
 	if s:cascadingGroupIndex == -1
 		call s:ErrorMsg('No cascaded search defined')
 		return 0
-	elseif s:cascadingStop
-		let s:cascadingStop = 0
+	elseif s:cascadingStop != -1
+		if s:cascadingLocation == s:GetLocation()
+			" Within the same location: Switch to the next mark group.
+			let s:cascadingGroupIndex = s:cascadingStop
+		else
+			" Allow to continue searching for the current mark group in other
+			" locations.
+		endif
+		let s:cascadingStop = -1
 		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
 	endif
 
@@ -1072,17 +1079,18 @@ function! mark#SearchNextCascade( count, isStopBeforeCascade, isBackward )
 	endtry
 endfunction
 function! s:Cascade( count, isStopBeforeCascade, isBackward )
-	let s:cascadingGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
-	if s:cascadingGroupIndex == -1
+	let l:nextGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
+	if l:nextGroupIndex == -1
 		call s:ErrorMsg('Cascaded search ended with last used group')
 		return 0
 	endif
 
 	if a:isStopBeforeCascade
-		let s:cascadingStop = 1
+		let s:cascadingStop = l:nextGroupIndex
 		call s:WarningMsg('Cascaded search reached last match of current group')
 		return 1
 	else
+		let s:cascadingGroupIndex = l:nextGroupIndex
 		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
 		return mark#SearchNextCascade(a:count, a:isStopBeforeCascade, a:isBackward)
 	endif
