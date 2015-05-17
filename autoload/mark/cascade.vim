@@ -87,14 +87,16 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 	endtry
 endfunction
 function! s:Cascade( count, isStopBeforeCascade, isBackward )
-	let l:nextGroupIndex = mark#NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
+	let l:nextGroupIndex = mark#NextUsedGroupIndex(a:isBackward, 0, s:cascadingGroupIndex, 1)
 	if l:nextGroupIndex == -1
-		call mark#ErrorMsg('Cascaded search ended with last used group')
+		redraw  " Get rid of the previous mark search message.
+		call mark#ErrorMsg(printf('Cascaded search ended with %s used group', (a:isBackward ? 'first' : 'last')))
 		return 0
 	endif
 
 	if a:isStopBeforeCascade
 		let s:cascadingStop = l:nextGroupIndex
+		redraw  " Get rid of the previous mark search message.
 		call mark#WarningMsg('Cascaded search reached last match of current group')
 		return 1
 	else
