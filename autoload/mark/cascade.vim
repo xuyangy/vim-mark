@@ -10,6 +10,9 @@
 "
 " Version:     2.9.0
 " Changes:
+" 18-May-2015, Ingo Karkat
+" - Change jumping behavior when starting cascade.
+"
 " 16-May-2015, Ingo Karkat
 " - Move functions for cascading search into seperate autoload script.
 
@@ -24,13 +27,12 @@ endfunction
 function! mark#cascade#Start( count, isStopBeforeCascade )
 	" Try passed mark group, current mark, last search, first used mark group, in that order.
 
-	if ! a:count
-		call s:SetCascade()
-		if s:cascadingGroupIndex != -1
-			" We're already on a mark. Take that as the start and proceed to
-			" then next match already.
-			return mark#cascade#Next(1, a:isStopBeforeCascade, 0)
-		endif
+	call s:SetCascade()
+	if (! a:count && s:cascadingGroupIndex != -1) || (a:count && s:cascadingGroupIndex + 1 == a:count)
+		" We're already on a mark [with its group corresponding to count]. Take
+		" that as the start and stay there (as we don't know which direction
+		" (forward / backward) to take).
+		return 1
 	endif
 
 	" Search for next mark and start cascaded search there.
