@@ -188,6 +188,15 @@ it's not the last mark used.
 Alternatively, you can set up mappings to search in a next / previous used
 group, see |mark-group-cycle|.
 
+					       *mark-cascaded-group-searching*
+[...]
+After a stop, retriggering the cascaded search in the same buffer and window
+moves to the next used group (you can jump inside the current buffer to choose
+a different starting point first). If you instead switch to another window or
+buffer, the current mark group continues to be searched (to allow you to
+keep searching for the current group in other locations, until those are all
+exhaused, too).
+
 MARK PERSISTENCE					    *mark-persistence*
 
 The marks can be kept and restored across Vim sessions, using the |viminfo|
