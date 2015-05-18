@@ -10,13 +10,6 @@
 "
 " Version:     2.9.0
 " Changes:
-" 19-May-2015, Ingo Karkat
-" - Add case for reversing search direction immediately after a cascade to the
-"   next group.
-" - Store visited buffers, and instead of re-searching such with the current
-"   mark group, cascade to the next one. This allows sequential iteration by
-"   mark group over multiple buffers.
-"
 " 18-May-2015, Ingo Karkat
 " - Change jumping behavior when starting cascade.
 " - Fix off-by-one switch in mark group in cascading search when reversing
@@ -83,10 +76,6 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 			call s:ClearLocationAndPosition()
 		endif
 		let s:cascadingStop = -1
-	elseif s:cascadingIsBackward != a:isBackward && s:cascadingLocation == s:GetLocation() && s:cascadingPosition == getpos('.')[1:2]
-		" We've just cascaded to the next mark group, and now want back to the
-		" previous one (by reversing search direction).
-		return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
 	endif
 
 	let l:save_wrapscan = &wrapscan
@@ -111,7 +100,7 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 					" match in the reversed direction, and set its position and
 					" direction, then stay put here.
 					let l:save_view = winsaveview()
-						silent call mark#SearchGroupMark(s:cascadingGroupIndex + 1, 1, a:isBackward, 1)
+						call mark#SearchGroupMark(s:cascadingGroupIndex + 1, 1, a:isBackward, 1)
 						let s:cascadingPosition = getpos('.')[1:2]
 						let s:cascadingIsBackward = a:isBackward
 					call winrestview(l:save_view)
