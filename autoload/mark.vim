@@ -10,8 +10,12 @@
 " Dependencies:
 "  - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.8.6
+" Version:     2.9.0
 " Changes:
+" 16-May-2015, Ingo Karkat
+" - Move implementation of cascading search to separate autoload script.
+" - Expose various utility functions for re-use in mark/cascade.vim.
+"
 " 15-May-2015, Ingo Karkat
 " - ENH: Add mark#SearchNextGroup().
 "
@@ -363,7 +367,7 @@ function! s:FreeGroupIndex()
 	endwhile
 	return -1
 endfunction
-function! s:NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
+function! mark#NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
 	if a:isBackward
 		let l:indices = range(a:startIndex - 1, 0, -1)
 		if a:isWrapAround
@@ -582,7 +586,7 @@ function! mark#DoMark( groupNum, ...)
 		call mark#Init()
 		if s:markNum <= 0
 			" Still no mark highlightings; complain.
-			call s:ErrorMsg('No mark highlightings defined')
+			call mark#ErrorMsg('No mark highlightings defined')
 			return [0, 0]
 		endif
 	endif
@@ -814,16 +818,16 @@ function! mark#SearchNextGroup( count, isBackward )
 		let l:groupIndex = s:lastSearch
 	endif
 
-	let l:groupIndex = s:NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
+	let l:groupIndex = mark#NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
 	if l:groupIndex == -1
-		call s:ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
+		call mark#ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
 		return 0
 	endif
 	return mark#SearchGroupMark(l:groupIndex + 1, 1, a:isBackward, 1)
 endfunction
 
 
-function! s:ErrorMsg( text, ... )
+function! mark#ErrorMsg( text, ... )
 	let v:errmsg = a:text
 	if a:0 && ! a:1 | return | endif
 
@@ -831,14 +835,14 @@ function! s:ErrorMsg( text, ... )
 	echomsg v:errmsg
 	echohl None
 endfunction
-function! s:WarningMsg( text )
+function! mark#WarningMsg( text )
 	let v:warningmsg = a:text
 	echohl WarningMsg
 	echomsg v:warningmsg
 	echohl None
 endfunction
-function! s:NoMarkErrorMessage()
-	call s:ErrorMsg('No marks defined')
+function! mark#NoMarkErrorMessage()
+	call mark#ErrorMsg('No marks defined')
 endfunction
 function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	if &wrapscan
@@ -846,13 +850,13 @@ function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	else
 		let l:errmsg = printf('%s search hit %s without match for: %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), a:searchPattern)
 	endif
-	call s:ErrorMsg(l:errmsg)
+	call mark#ErrorMsg(l:errmsg)
 endfunction
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning.
 function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType )
 	if empty(a:pattern)
-		call s:NoMarkErrorMessage()
+		call mark#NoMarkErrorMessage()
 		return 0
 	endif
 
@@ -1004,97 +1008,6 @@ function! mark#SearchNext( isBackward, ... )
 	return 1
 endfunction
 
-" Search cascading mark groups.
-let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex, s:cascadingStop] = [[], [], -1, -1]
-function! s:GetLocation()
-	return [tabpagenr(), winnr(), bufnr('')]
-endfunction
-function! s:SetCascade()
-	let s:cascadingLocation = s:GetLocation()
-	let [l:markText, s:cascadingPosition, s:cascadingGroupIndex] = mark#CurrentMark()
-endfunction
-function! mark#StartCascade( count, isStopBeforeCascade )
-	" Try passed mark group, current mark, last search, first used mark group, in that order.
-
-	if ! a:count
-		call s:SetCascade()
-		if s:cascadingGroupIndex != -1
-			" We're already on a mark. Take that as the start and proceed to
-			" then next match already.
-			return mark#SearchNextCascade(1, a:isStopBeforeCascade, 0)
-		endif
-	endif
-
-	" Search for next mark and start cascaded search there.
-	if ! mark#SearchGroupMark(a:count, 1, 0, 1)
-		if a:count
-			return 0
-		elseif ! mark#SearchGroupMark(s:NextUsedGroupIndex(0, 0, -1, 1) + 1, 1, 0, 1)
-			call s:NoMarkErrorMessage()
-			return 0
-		endif
-	endif
-	call s:SetCascade()
-	return 1
-endfunction
-function! mark#SearchNextCascade( count, isStopBeforeCascade, isBackward )
-	if s:cascadingGroupIndex == -1
-		call s:ErrorMsg('No cascaded search defined')
-		return 0
-	elseif s:cascadingStop != -1
-		if s:cascadingLocation == s:GetLocation()
-			" Within the same location: Switch to the next mark group.
-			let s:cascadingGroupIndex = s:cascadingStop
-		else
-			" Allow to continue searching for the current mark group in other
-			" locations.
-		endif
-		let s:cascadingStop = -1
-		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
-	endif
-
-	let l:save_wrapscan = &wrapscan
-	set wrapscan
-	let l:save_view = winsaveview()
-	try
-		if ! mark#SearchGroupMark(s:cascadingGroupIndex + 1, a:count, a:isBackward, 1)
-			return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
-		endif
-		if s:cascadingLocation == s:GetLocation()
-			if s:cascadingPosition == getpos('.')[1:2]
-				" We're returned to the first match from that group. Undo that
-				" last jump, and then cascade to the next one.
-				call winrestview(l:save_view)
-				return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
-			endif
-		endif
-
-		if empty(s:cascadingLocation) && empty(s:cascadingPosition)
-			call s:SetCascade()
-		endif
-
-		return 1
-	finally
-		let &wrapscan = l:save_wrapscan
-	endtry
-endfunction
-function! s:Cascade( count, isStopBeforeCascade, isBackward )
-	let l:nextGroupIndex = s:NextUsedGroupIndex(0, 0, s:cascadingGroupIndex, 1)
-	if l:nextGroupIndex == -1
-		call s:ErrorMsg('Cascaded search ended with last used group')
-		return 0
-	endif
-
-	if a:isStopBeforeCascade
-		let s:cascadingStop = l:nextGroupIndex
-		call s:WarningMsg('Cascaded search reached last match of current group')
-		return 1
-	else
-		let s:cascadingGroupIndex = l:nextGroupIndex
-		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
-		return mark#SearchNextCascade(a:count, a:isStopBeforeCascade, a:isBackward)
-	endif
-endfunction
 
 
 " Load mark patterns from list.
@@ -1145,7 +1058,7 @@ function! mark#LoadCommand( isShowMessages, ... )
 			let l:marks = eval(l:marksVariable)
 			let l:isEnabled = 1
 		else
-			call s:ErrorMsg('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
+			call mark#ErrorMsg('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
 			return
 		endif
 	else
@@ -1153,7 +1066,7 @@ function! mark#LoadCommand( isShowMessages, ... )
 			let l:marks = g:MARK_MARKS
 			let l:isEnabled = (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1)
 		else
-			call s:ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
+			call mark#ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
 			return
 		endif
 	endif
@@ -1171,10 +1084,10 @@ function! mark#LoadCommand( isShowMessages, ... )
 		endif
 	catch /^Vim\%((\a\+)\)\=:/
 		if exists('l:marksVariable')
-			call s:ErrorMsg(printf('Corrupted persistent mark info in %s', l:marksVariable), a:isShowMessages)
+			call mark#ErrorMsg(printf('Corrupted persistent mark info in %s', l:marksVariable), a:isShowMessages)
 			execute 'unlet!' l:marksVariable
 		else
-			call s:ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED', a:isShowMessages)
+			call mark#ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED', a:isShowMessages)
 			unlet! g:MARK_MARKS
 			unlet! g:MARK_ENABLED
 		endif
@@ -1195,7 +1108,7 @@ function! s:SavePattern( ... )
 		catch /^Vim\%((\a\+)\)\=:/
 			" v:exception contains what is normally in v:errmsg, but with extra
 			" exception source info prepended, which we cut away.
-			call s:ErrorMsg(substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', ''))
+			call mark#ErrorMsg(substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', ''))
 			return -1
 		endtry
 	else
@@ -1207,14 +1120,14 @@ endfunction
 function! mark#SaveCommand( ... )
 	if ! s:HasVariablePersistence()
 		if ! a:0
-			call s:ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call mark#ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 		elseif a:1 =~# '^\u\+$'
-			call s:WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call mark#WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 		endif
 	endif
 
 	if ! call('s:SavePattern', a:000)
-		call s:WarningMsg('No marks defined')
+		call mark#WarningMsg('No marks defined')
 	endif
 endfunction
 
