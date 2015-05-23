@@ -8,10 +8,16 @@
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
 "
 " Dependencies:
-"  - SearchSpecial.vim autoload script (optional, for improved search messages).
+"	- ingo/err.vim autoload script
+"	- ingo/msg.vim autoload script
+"	- SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     2.9.0
+" Version:     3.0.0
 " Changes:
+" 19-May-2015, Ingo Karkat
+" - Properly abort on error by using :echoerr. Use ingo/err.vim for the
+"   implementation. Retire mark#ErrorMsg() and mark#WarningMsg().
+"
 " 16-May-2015, Ingo Karkat
 " - Move implementation of cascading search to separate autoload script.
 " - Expose various utility functions for re-use in mark/cascade.vim.
@@ -581,12 +587,13 @@ endfunction
 " cleared. markGroupNum is the mark group number where the mark was set. It is 0
 " if the group was cleared.
 function! mark#DoMark( groupNum, ...)
+	call ingo#err#Clear()
 	if s:markNum <= 0
 		" Uh, somehow no mark highlightings were defined. Try to detect them again.
 		call mark#Init()
 		if s:markNum <= 0
 			" Still no mark highlightings; complain.
-			call mark#ErrorMsg('No mark highlightings defined')
+			call ingo#err#Set('No mark highlightings defined')
 			return [0, 0]
 		endif
 	endif
@@ -686,7 +693,7 @@ function! s:IsRegexpValid( expr )
 	catch /^Vim\%((\a\+)\)\=:/
 		" v:exception contains what is normally in v:errmsg, but with extra
 		" exception source info prepended, which we cut away.
-		let v:errmsg = substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', '')
+		call ingo#err#SetVimException()
 		return 0
 	endtry
 endfunction
@@ -769,6 +776,7 @@ function! mark#SearchCurrentMark( isBackward )
 endfunction
 
 function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
+	call ingo#err#Clear()
 	if a:groupNum == 0
 		" No mark group number specified; use last search, and fall back to
 		" current mark if possible.
@@ -820,29 +828,15 @@ function! mark#SearchNextGroup( count, isBackward )
 
 	let l:groupIndex = mark#NextUsedGroupIndex(a:isBackward, 1, l:groupIndex, a:count)
 	if l:groupIndex == -1
-		call mark#ErrorMsg(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
+		call ingo#err#Set(printf('No %s mark group%s used', (a:count == 1 ? '' : a:count . ' ') . (a:isBackward ? 'previous' : 'next'), (a:count == 1 ? '' : 's')))
 		return 0
 	endif
 	return mark#SearchGroupMark(l:groupIndex + 1, 1, a:isBackward, 1)
 endfunction
 
 
-function! mark#ErrorMsg( text, ... )
-	let v:errmsg = a:text
-	if a:0 && ! a:1 | return | endif
-
-	echohl ErrorMsg
-	echomsg v:errmsg
-	echohl None
-endfunction
-function! mark#WarningMsg( text )
-	let v:warningmsg = a:text
-	echohl WarningMsg
-	echomsg v:warningmsg
-	echohl None
-endfunction
 function! mark#NoMarkErrorMessage()
-	call mark#ErrorMsg('No marks defined')
+	call ingo#err#Set('No marks defined')
 endfunction
 function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	if &wrapscan
@@ -850,7 +844,7 @@ function! s:ErrorMessage( searchType, searchPattern, isBackward )
 	else
 		let l:errmsg = printf('%s search hit %s without match for: %s', a:searchType, (a:isBackward ? 'TOP' : 'BOTTOM'), a:searchPattern)
 	endif
-	call mark#ErrorMsg(l:errmsg)
+	call ingo#err#Set(l:errmsg)
 endfunction
 
 " Wrapper around search() with additonal search and error messages and "wrapscan" warning.
@@ -1058,16 +1052,16 @@ function! mark#LoadCommand( isShowMessages, ... )
 			let l:marks = eval(l:marksVariable)
 			let l:isEnabled = 1
 		else
-			call mark#ErrorMsg('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
-			return
+			call ingo#err#Set('No marks stored under ' . l:marksVariable . (s:HasVariablePersistence() || a:1 !~# '^\u\+$' ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
+			return 0
 		endif
 	else
 		if exists('g:MARK_MARKS')
 			let l:marks = g:MARK_MARKS
 			let l:isEnabled = (exists('g:MARK_ENABLED') ? g:MARK_ENABLED : 1)
 		else
-			call mark#ErrorMsg('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"), a:isShowMessages)
-			return
+			call ingo#err#Set('No persistent marks found' . (s:HasVariablePersistence() ? '' : ", and persistence not configured via ! flag in 'viminfo'"))
+			return 0
 		endif
 	endif
 
@@ -1082,15 +1076,17 @@ function! mark#LoadCommand( isShowMessages, ... )
 				echomsg printf('Loaded %d mark%s', l:loadedMarkNum, (l:loadedMarkNum == 1 ? '' : 's')) . (s:enabled ? '' : '; marks currently disabled')
 			endif
 		endif
+		return 1
 	catch /^Vim\%((\a\+)\)\=:/
 		if exists('l:marksVariable')
-			call mark#ErrorMsg(printf('Corrupted persistent mark info in %s', l:marksVariable), a:isShowMessages)
+			call ingo#err#Set(printf('Corrupted persistent mark info in %s', l:marksVariable))
 			execute 'unlet!' l:marksVariable
 		else
-			call mark#ErrorMsg('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED', a:isShowMessages)
+			call ingo#err#Set('Corrupted persistent mark info in g:MARK_MARKS and g:MARK_ENABLED')
 			unlet! g:MARK_MARKS
 			unlet! g:MARK_ENABLED
 		endif
+		return 0
 	endtry
 endfunction
 
@@ -1106,29 +1102,30 @@ function! s:SavePattern( ... )
 				let g:MARK_{a:1} = string(l:savedMarks)
 			endif
 		catch /^Vim\%((\a\+)\)\=:/
-			" v:exception contains what is normally in v:errmsg, but with extra
-			" exception source info prepended, which we cut away.
-			call mark#ErrorMsg(substitute(v:exception, '^\CVim\%((\a\+)\)\=:', '', ''))
-			return -1
+			call ingo#err#SetVimException()
+			return 0
 		endtry
 	else
 		let g:MARK_MARKS = string(l:savedMarks)
 		let g:MARK_ENABLED = s:enabled
 	endif
-	return ! empty(l:savedMarks)
+	return (empty(l:savedMarks) ? 2 : 1)
 endfunction
 function! mark#SaveCommand( ... )
 	if ! s:HasVariablePersistence()
 		if ! a:0
-			call mark#ErrorMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call ingo#err#Set("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			return 0
 		elseif a:1 =~# '^\u\+$'
-			call mark#WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
+			call ingo#msg#WarningMsg("Cannot persist marks, need ! flag in 'viminfo': :set viminfo+=!")
 		endif
 	endif
 
-	if ! call('s:SavePattern', a:000)
-		call mark#WarningMsg('No marks defined')
+	let l:result = call('s:SavePattern', a:000)
+	if l:result == 2
+		call ingo#msg#WarningMsg('No marks defined')
 	endif
+	return l:result
 endfunction
 
 " :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
