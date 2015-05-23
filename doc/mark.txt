@@ -293,6 +293,8 @@ To uninstall, use the |:RmVimball| command.
 DEPENDENCIES						   *mark-dependencies*
 
 - Requires Vim 7.1 with |matchadd()|, or Vim 7.2 or higher.
+- Requires the |ingo-library.vim| plugin (vimscript #4433), version 1.020 or
+  higher.
 
 ==============================================================================
 CONFIGURATION						  *mark-configuration*
@@ -451,7 +453,7 @@ IDEAS								  *mark-ideas*
 ==============================================================================
 HISTORY								*mark-history*
 
-2.8.6	RELEASEME
+3.0.0	RELEASEME
 - ENH: Keep previous (last accessed) window on :windo.
 - Consistently use :noautocmd during window iteration.
 - ENH: Add :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
@@ -461,6 +463,13 @@ HISTORY								*mark-history*
   :MarkSave/Load.
 - ENH: Add <Plug>MarkSearchUsedGroupNext and <Plug>MarkSearchUsedGroupPrev to
   search in a next / previous used group. Suggested by Louis Pan.
+- ENH: Add <Plug>MarkSearchCascadeStartWithStop,
+  <Plug>MarkSearchCascadeNextWithStop, <Plug>MarkSearchCascadeStartNoStop,
+  <Plug>MarkSearchCascadeNextNoStop to search in cascading mark groups, i.e.
+  first all matches for group 1, then all for group 2, and so on.
+- Properly abort on error by using :echoerr.
+- Add dependency to ingo-library (vimscript #4433). *** You need to separately
+  install ingo-library (vimscript #4433) version 1.020 (or higher)! ***
 
 2.8.5	29-Oct-2014
 - ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
