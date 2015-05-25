@@ -15,19 +15,9 @@
 "
 " Version:     3.0.0
 " Changes:
-" 26-May-2015 Ingo Karkat
+" 24-May-2015 Ingo Karkat
 " - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}.
 " - Adapt mark#YankDefinitions(), too.
-" - ENH: Add mark#SetName(). Adapt mark#List() to show mark names (if set).
-"   Adapt mark persistence functions to save / restore mark name within the List
-"   of marks (as an object {'pattern': ..., 'name': ...}) if defined; mostly via
-"   s:SerializeMark() and s:DeserializeMark(). Keep old List of Strings format
-"   for marks without names, as this is shorter and will likely remain the most
-"   common use.
-" - Rename mark#ToPatternList() to mark#ToList().
-" - CHG: Duplicate mark#GetNum() and mark#GetGroupNum(). Rename the former into
-"   mark#GetCount() and have it return the number of actually defined (i.e.
-"   non-empty) marks.
 "
 " 19-May-2015, Ingo Karkat
 " - Properly abort on error by using :echoerr. Use ingo/err.vim for the
@@ -363,8 +353,8 @@ function! mark#MarkRegex( groupNum, regexpPreset )
 			let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
 		echohl None
 	call inputrestore()
+	let v:errmsg = ''
 	if empty(l:regexp)
-		call ingo#err#Clear()
 		return 0
 	endif
 
@@ -528,7 +518,7 @@ function! mark#Toggle()
 	else
 		call s:MarkEnable(1)
 
-		let l:markCnt = mark#GetCount()
+		let l:markCnt = len(filter(copy(s:pattern), '! empty(v:val)'))
 		echo 'Enabled' (l:markCnt > 0 ? l:markCnt . ' ' : '') . 'marks'
 	endif
 endfunction
@@ -706,6 +696,8 @@ function! s:IsRegexpValid( expr )
 		call match('', a:expr)
 		return 1
 	catch /^Vim\%((\a\+)\)\=:/
+		" v:exception contains what is normally in v:errmsg, but with extra
+		" exception source info prepended, which we cut away.
 		call ingo#err#SetVimException()
 		return 0
 	endtry
@@ -728,7 +720,7 @@ function! mark#SetMark( groupNum, ... )
 	" exist (interactivity in Ex commands is unexpected). Instead, return an
 	" error.
 	if s:markNum > 0 && a:groupNum > s:markNum
-		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
+		let v:errmsg = printf('Only %d mark highlight groups', s:markNum)
 		return 0
 	endif
 	if a:0
@@ -1037,7 +1029,7 @@ function! mark#Load( marks, enabled )
 		call mark#UpdateScope()
 
 		" The list of patterns may be sparse, return only the actual patterns.
-		return mark#GetCount()
+		return len(filter(a:marks[0:(s:markNum - 1)], '! empty(v:val)'))
 	endif
 	return 0
 endfunction
@@ -1061,7 +1053,7 @@ function! mark#ToList()
 	" highlight groups in Vim and GVIM). We want to keep empty patterns in the
 	" front and middle to maintain the mapping to highlight groups, though.
 	let l:highestNonEmptyIndex = s:markNum - 1
-	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex]) && empty(s:names[l:highestNonEmptyIndex])
+	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex])
 		let l:highestNonEmptyIndex -= 1
 	endwhile
 
@@ -1249,12 +1241,12 @@ function! mark#List()
 	let l:hasNamedMarks = s:HasNamedMarks()
 	echohl Title
 	if l:hasNamedMarks
-		echo "group:name\tpattern"
+		echo "mark (name)\tpattern"
 	else
-		echo 'group     pattern'
+		echo 'mark      pattern'
 	endif
 	echohl None
-	echon '   (N) # of alternatives   > next mark group    / current search mark'
+	echon '  (> next mark group   / current search mark)'
 	let l:nextGroupIndex = s:GetNextGroupIndex()
 	for i in range(s:markNum)
 		execute 'echohl MarkWord' . (i + 1)
@@ -1271,6 +1263,10 @@ function! mark#List()
 	endif
 endfunction
 
+function! mark#GetGroupNum()
+	return s:markNum
+endfunction
+
 
 " :Mark command completion.
 function! mark#Complete( ArgLead, CmdLine, CursorPos )
@@ -1283,7 +1279,7 @@ function! mark#Complete( ArgLead, CmdLine, CursorPos )
 	" Complete from the command's mark group, or all groups when none is
 	" specified.
 	let l:groupNum = 0 + l:matches[1]
-	let l:patterns =(l:groupNum == 0 || empty(get(s:pattern, l:groupNum - 1, '')) ? s:GetUsedPatterns() : [s:pattern[l:groupNum - 1]])
+	let l:patterns =(l:groupNum == 0 || empty(get(s:pattern, l:groupNum - 1, '')) ? filter(copy(s:pattern), '! empty(v:val)') : [s:pattern[l:groupNum - 1]])
 
 	" Complete both the entire pattern as well as its individual alternatives.
 	let l:expandedPatterns = []
@@ -1301,8 +1297,6 @@ function! mark#Complete( ArgLead, CmdLine, CursorPos )
 		endif
 	endfor
 
-	call map(l:expandedPatterns, '"/" . escape(v:val, "/") . "/"')
-
 	" Filter according to the argument lead. Allow to omit the frequent initial
 	" \< atom in the lead.
 	return filter(l:expandedPatterns, "v:val =~ '^\\%(\\\\<\\)\\?\\V' . " . string(escape(a:ArgLead, '\')))
@@ -1312,16 +1306,8 @@ endfunction
 "- integrations ----------------------------------------------------------------
 
 " Access the number of possible marks.
-function! mark#GetGroupNum()
+function! mark#GetNum()
 	return s:markNum
-endfunction
-
-" Access the number of defined marks.
-function! s:GetUsedPatterns()
-	return filter(copy(s:pattern), '! empty(v:val)')
-endfunction
-function! mark#GetCount()
-	return len(s:GetUsedPatterns())
 endfunction
 
 " Access the current / passed index pattern.
