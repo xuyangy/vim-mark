@@ -117,7 +117,8 @@ HIGHLIGHTING						   *mark-highlighting*
 
 								       *:Mark*
 :[N]Mark		Clear the marks represented by highlight group [N].
-:[N]Mark[!] {pattern}	Mark or unmark {pattern}. Unless [N] is given, the
+:[N]Mark[!] [/]{pattern}[/]
+			Mark or unmark {pattern}. Unless [N] is given, the
 			next free highlight group is used for marking.
 			With [N], mark {pattern} with the named highlight
 			group [N]. When that group is not empty, the word is
@@ -128,6 +129,8 @@ HIGHLIGHTING						   *mark-highlighting*
 			alternatives, it is removed.
 			For implementation reasons, {pattern} cannot use the
 			'smartcase' setting, only 'ignorecase'.
+			Without [/], only literal whole words are matched.
+			|:search-args|
 :Mark			Disable all marks, similar to |:nohlsearch|. Marks
 			will automatically re-enable when a mark is added or
 			removed, or a search for marks is performed.
@@ -454,6 +457,9 @@ IDEAS								  *mark-ideas*
 HISTORY								*mark-history*
 
 3.0.0	RELEASEME
+- CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}. This
+  better addresses the common use case of searching for whole words, and is
+  consistent with built-in commands like :djump.
 - ENH: Keep previous (last accessed) window on :windo.
 - Consistently use :noautocmd during window iteration.
 - ENH: Add :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
