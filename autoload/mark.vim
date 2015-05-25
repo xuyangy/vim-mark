@@ -24,9 +24,6 @@
 "   s:SerializeMark() and s:DeserializeMark(). Keep old List of Strings format
 "   for marks without names, as this is shorter and will likely remain the most
 "   common use.
-" - Indicate current mark name for current-mark searches. Rename "mark-*" search
-"   type and append the actual current mark (plus optional name) to it:
-"   "mark*3:foo".
 " - Rename mark#ToPatternList() to mark#ToList().
 " - CHG: Duplicate mark#GetNum() and mark#GetGroupNum(). Rename the former into
 "   mark#GetCount() and have it return the number of actually defined (i.e.
@@ -584,26 +581,12 @@ function! s:ClearMark( index )
 	" A last search there is reset.
 	call s:SetMark(a:index, '', -1)
 endfunction
-function! s:RenderName( groupNum )
-	return (empty(s:names[a:groupNum - 1]) ? '' : ':' . s:names[a:groupNum - 1])
-endfunction
-function! s:EnrichSearchType( searchType )
-	if a:searchType !=# 'mark*'
-		return a:searchType
-	endif
-
-	let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
-	return (l:markIndex >= 0 ? a:searchType . (l:markIndex + 1) .  s:RenderName(l:markIndex + 1) : a:searchType)
-endfunction
-function! s:RenderMark( groupNum )
-	return 'mark-' . a:groupNum . s:RenderName(a:groupNum)
-endfunction
 function! s:EchoMark( groupNum, regexp )
-	call s:EchoSearchPattern(s:RenderMark(a:groupNum), a:regexp, 0)
+	call s:EchoSearchPattern('mark-' . a:groupNum, a:regexp, 0)
 endfunction
 function! s:EchoMarkCleared( groupNum )
 	echohl SearchSpecialSearchType
-	echo s:RenderMark(a:groupNum)
+	echo 'mark-' . a:groupNum
 	echohl None
 	echon ' cleared'
 endfunction
@@ -800,10 +783,10 @@ function! mark#SearchCurrentMark( isBackward )
 			let l:result = mark#SearchAnyMark(a:isBackward)
 			let s:lastSearch = mark#CurrentMark()[2]
 		else
-			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], s:RenderMark(s:lastSearch + 1))
+			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], 'mark-' . (s:lastSearch + 1))
 		endif
 	else
-		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, s:RenderMark(l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 		let s:lastSearch = l:markIndex
 	endif
 
@@ -840,7 +823,7 @@ function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 		let l:markPosition = []
 	endif
 
-	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, s:RenderMark(l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 	if a:isSetLastSearch
 		let s:lastSearch = l:markIndex
 	endif
@@ -982,9 +965,9 @@ function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType 
 		call s:MarkEnable(1)
 
 		if l:isWrapped
-			call s:WrapMessage(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
+			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
 		else
-			call s:EchoSearchPattern(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
+			call s:EchoSearchPattern(a:searchType, a:pattern, a:isBackward)
 		endif
 		return 1
 	else
@@ -1002,7 +985,7 @@ function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType 
 		call s:MarkEnable(1)
 
 		if l:line > 0 && l:isStuckAtCurrentMark && l:isWrapped
-			call s:WrapMessage(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
+			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
 			return 1
 		else
 			call s:ErrorMessage(a:searchType, a:pattern, a:isBackward)
@@ -1021,7 +1004,7 @@ function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
 	let s:lastSearch = -1
-	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark*')
+	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-*')
 endfunction
 
 " Search last searched mark.
@@ -1201,20 +1184,8 @@ endfunction
 function! s:HasNamedMarks()
 	return (! empty(filter(copy(s:names), '! empty(v:val)')))
 endfunction
-function! mark#SetName( isClearAll, groupNum, name )
-	if a:isClearAll
-		if a:groupNum != 0
-			call ingo#err#Set('Use either [!] to clear all names, or [N] to name a single group, but not both.')
-			return 0
-		endif
-		let s:names = repeat([''], s:markNum)
-	elseif a:groupNum > s:markNum
-		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
-		return 0
-	else
-		let s:names[a:groupNum - 1] = a:name
-	endif
-	return 1
+function! mark#SetName( isBang, groupNum, name )
+	let s:names[a:groupNum - 1] = a:name
 endfunction
 
 
