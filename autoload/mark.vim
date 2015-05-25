@@ -8,12 +8,17 @@
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
 "
 " Dependencies:
+"	- ingo/cmdargs/pattern.vim autoload script
 "	- ingo/err.vim autoload script
 "	- ingo/msg.vim autoload script
 "	- SearchSpecial.vim autoload script (optional, for improved search messages).
 "
 " Version:     3.0.0
 " Changes:
+" 24-May-2015 Ingo Karkat
+" - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}.
+" - Adapt mark#YankDefinitions(), too.
+"
 " 19-May-2015, Ingo Karkat
 " - Properly abort on error by using :echoerr. Use ingo/err.vim for the
 "   implementation. Retire mark#ErrorMsg() and mark#WarningMsg().
@@ -718,7 +723,12 @@ function! mark#SetMark( groupNum, ... )
 		let v:errmsg = printf('Only %d mark highlight groups', mark#GetGroupNum())
 		return 0
 	endif
-	return call('mark#DoMarkAndSetCurrent', [a:groupNum] + a:000)
+	if a:0
+		let l:pattern = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1)
+		return mark#DoMarkAndSetCurrent(a:groupNum, l:pattern)
+	else
+		return mark#DoMarkAndSetCurrent(a:groupNum)
+	endif
 endfunction
 
 " Return [mark text, mark start position, mark index] of the mark under the
@@ -1138,7 +1148,7 @@ function! mark#YankDefinitions( isOneLiner, register )
 	let l:commands = []
 	for l:i in range(len(l:marks))
 		if ! empty(l:marks[l:i])
-			call add(l:commands, printf('%dMark! %s', l:i + 1, l:marks[l:i]))
+			call add(l:commands, printf('%dMark! /%s/', l:i + 1, escape(l:marks[l:i], '/'))
 		endif
 	endfor
 
