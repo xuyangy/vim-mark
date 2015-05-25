@@ -31,8 +31,6 @@
 " - CHG: Duplicate mark#GetNum() and mark#GetGroupNum(). Rename the former into
 "   mark#GetCount() and have it return the number of actually defined (i.e.
 "   non-empty) marks.
-" - FIX: mark#DoMarkAndSetCurrent() error case of invalid regexp needs to return
-"   List [0, 0] (just like subordinate mark#DoMark()) instead of Number 0.
 "
 " 19-May-2015, Ingo Karkat
 " - Properly abort on error by using :echoerr. Use ingo/err.vim for the
@@ -731,7 +729,7 @@ function! s:IsRegexpValid( expr )
 endfunction
 function! mark#DoMarkAndSetCurrent( groupNum, ... )
 	if a:0 && ! s:IsRegexpValid(a:1)
-		return [0, 0]
+		return 0
 	endif
 
 	let l:result = call('mark#DoMark', [a:groupNum] + a:000)
@@ -751,12 +749,8 @@ function! mark#SetMark( groupNum, ... )
 		return 0
 	endif
 	if a:0
-		let [l:pattern, l:nameArgument] = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1, '\(\s\+as\%(\s\+\(.\{-}\)\)\?\)\?\s*')
-		let [l:success, l:markGroupNum] = mark#DoMarkAndSetCurrent(a:groupNum, l:pattern)
-		if l:success && l:markGroupNum > 0 && ! empty(l:nameArgument)
-			let s:names[l:markGroupNum - 1] = substitute(l:nameArgument, '^\s\+as\s*', '', '')
-		endif
-		return [l:success, l:markGroupNum]
+		let l:pattern = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1)
+		return mark#DoMarkAndSetCurrent(a:groupNum, l:pattern)
 	else
 		return mark#DoMarkAndSetCurrent(a:groupNum)
 	endif
@@ -1069,11 +1063,14 @@ endfunction
 function! s:SerializeMark( index )
 	return (empty(s:names[a:index]) ? s:pattern[a:index] : {'pattern': s:pattern[a:index], 'name': s:names[a:index]})
 endfunction
-function! s:Deserialize( mark )
-	return (type(a:mark) == type({}) ? [get(a:mark, 'pattern', ''), get(a:mark, 'name', '')] : [a:mark, ''])
-endfunction
 function! s:DeserializeMark( mark, index )
-	let [s:pattern[a:index], s:names[a:index]] = s:Deserialize(a:mark)
+	if type(a:mark) == type({})
+		let s:pattern[a:index] = get(a:mark, 'pattern', '')
+		let s:names[a:index] = get(a:mark, 'name', '')
+	else
+		let s:pattern[a:index] = a:mark
+		let s:names[a:index] = ''
+	endif
 endfunction
 function! mark#ToList()
 	" Trim unused patterns from the end of the list, the amount of available marks
@@ -1190,8 +1187,7 @@ function! mark#YankDefinitions( isOneLiner, register )
 	let l:commands = []
 	for l:i in range(len(l:marks))
 		if ! empty(l:marks[l:i])
-			let [l:pattern, l:name] = s:Deserialize(l:marks[l:i])
-			call add(l:commands, printf('%dMark! /%s/%s', l:i + 1, escape(l:pattern, '/'), (empty(l:name) ? '' : ' as ' . l:name)))
+			call add(l:commands, printf('%dMark! /%s/', l:i + 1, escape(l:marks[l:i], '/'))
 		endif
 	endfor
 
