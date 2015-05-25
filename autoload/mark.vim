@@ -15,9 +15,24 @@
 "
 " Version:     3.0.0
 " Changes:
-" 24-May-2015 Ingo Karkat
+" 26-May-2015 Ingo Karkat
 " - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}.
 " - Adapt mark#YankDefinitions(), too.
+" - ENH: Add mark#SetName(). Adapt mark#List() to show mark names (if set).
+"   Adapt mark persistence functions to save / restore mark name within the List
+"   of marks (as an object {'pattern': ..., 'name': ...}) if defined; mostly via
+"   s:SerializeMark() and s:DeserializeMark(). Keep old List of Strings format
+"   for marks without names, as this is shorter and will likely remain the most
+"   common use.
+" - Indicate current mark name for current-mark searches. Rename "mark-*" search
+"   type and append the actual current mark (plus optional name) to it:
+"   "mark*3:foo".
+" - Rename mark#ToPatternList() to mark#ToList().
+" - CHG: Duplicate mark#GetNum() and mark#GetGroupNum(). Rename the former into
+"   mark#GetCount() and have it return the number of actually defined (i.e.
+"   non-empty) marks.
+" - FIX: mark#DoMarkAndSetCurrent() error case of invalid regexp needs to return
+"   List [0, 0] (just like subordinate mark#DoMark()) instead of Number 0.
 "
 " 19-May-2015, Ingo Karkat
 " - Properly abort on error by using :echoerr. Use ingo/err.vim for the
@@ -353,8 +368,8 @@ function! mark#MarkRegex( groupNum, regexpPreset )
 			let l:regexp = input('Input pattern to mark: ', a:regexpPreset)
 		echohl None
 	call inputrestore()
-	let v:errmsg = ''
 	if empty(l:regexp)
+		call ingo#err#Clear()
 		return 0
 	endif
 
@@ -518,7 +533,7 @@ function! mark#Toggle()
 	else
 		call s:MarkEnable(1)
 
-		let l:markCnt = len(filter(copy(s:pattern), '! empty(v:val)'))
+		let l:markCnt = mark#GetCount()
 		echo 'Enabled' (l:markCnt > 0 ? l:markCnt . ' ' : '') . 'marks'
 	endif
 endfunction
@@ -571,12 +586,26 @@ function! s:ClearMark( index )
 	" A last search there is reset.
 	call s:SetMark(a:index, '', -1)
 endfunction
+function! s:RenderName( groupNum )
+	return (empty(s:names[a:groupNum - 1]) ? '' : ':' . s:names[a:groupNum - 1])
+endfunction
+function! s:EnrichSearchType( searchType )
+	if a:searchType !=# 'mark*'
+		return a:searchType
+	endif
+
+	let [l:markText, l:markPosition, l:markIndex] = mark#CurrentMark()
+	return (l:markIndex >= 0 ? a:searchType . (l:markIndex + 1) .  s:RenderName(l:markIndex + 1) : a:searchType)
+endfunction
+function! s:RenderMark( groupNum )
+	return 'mark-' . a:groupNum . s:RenderName(a:groupNum)
+endfunction
 function! s:EchoMark( groupNum, regexp )
-	call s:EchoSearchPattern('mark-' . a:groupNum, a:regexp, 0)
+	call s:EchoSearchPattern(s:RenderMark(a:groupNum), a:regexp, 0)
 endfunction
 function! s:EchoMarkCleared( groupNum )
 	echohl SearchSpecialSearchType
-	echo 'mark-' . a:groupNum
+	echo s:RenderMark(a:groupNum)
 	echohl None
 	echon ' cleared'
 endfunction
@@ -696,15 +725,13 @@ function! s:IsRegexpValid( expr )
 		call match('', a:expr)
 		return 1
 	catch /^Vim\%((\a\+)\)\=:/
-		" v:exception contains what is normally in v:errmsg, but with extra
-		" exception source info prepended, which we cut away.
 		call ingo#err#SetVimException()
 		return 0
 	endtry
 endfunction
 function! mark#DoMarkAndSetCurrent( groupNum, ... )
 	if a:0 && ! s:IsRegexpValid(a:1)
-		return 0
+		return [0, 0]
 	endif
 
 	let l:result = call('mark#DoMark', [a:groupNum] + a:000)
@@ -720,12 +747,16 @@ function! mark#SetMark( groupNum, ... )
 	" exist (interactivity in Ex commands is unexpected). Instead, return an
 	" error.
 	if s:markNum > 0 && a:groupNum > s:markNum
-		let v:errmsg = printf('Only %d mark highlight groups', mark#GetGroupNum())
+		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
 		return 0
 	endif
 	if a:0
-		let l:pattern = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1)
-		return mark#DoMarkAndSetCurrent(a:groupNum, l:pattern)
+		let [l:pattern, l:nameArgument] = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1, '\(\s\+as\%(\s\+\(.\{-}\)\)\?\)\?\s*')
+		let [l:success, l:markGroupNum] = mark#DoMarkAndSetCurrent(a:groupNum, l:pattern)
+		if l:success && l:markGroupNum > 0 && ! empty(l:nameArgument)
+			let s:names[l:markGroupNum - 1] = substitute(l:nameArgument, '^\s\+as\s*', '', '')
+		endif
+		return [l:success, l:markGroupNum]
 	else
 		return mark#DoMarkAndSetCurrent(a:groupNum)
 	endif
@@ -775,10 +806,10 @@ function! mark#SearchCurrentMark( isBackward )
 			let l:result = mark#SearchAnyMark(a:isBackward)
 			let s:lastSearch = mark#CurrentMark()[2]
 		else
-			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], 'mark-' . (s:lastSearch + 1))
+			let l:result = s:Search(s:pattern[s:lastSearch], v:count1, a:isBackward, [], s:RenderMark(s:lastSearch + 1))
 		endif
 	else
-		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+		let l:result = s:Search(l:markText, v:count1, a:isBackward, l:markPosition, s:RenderMark(l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 		let s:lastSearch = l:markIndex
 	endif
 
@@ -815,7 +846,7 @@ function! mark#SearchGroupMark( groupNum, count, isBackward, isSetLastSearch )
 		let l:markPosition = []
 	endif
 
-	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, 'mark-' . (l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
+	let l:result =  s:Search(l:markText, a:count, a:isBackward, l:markPosition, s:RenderMark(l:markIndex + 1) . (l:markIndex ==# s:lastSearch ? '' : '!'))
 	if a:isSetLastSearch
 		let s:lastSearch = l:markIndex
 	endif
@@ -957,9 +988,9 @@ function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType 
 		call s:MarkEnable(1)
 
 		if l:isWrapped
-			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
+			call s:WrapMessage(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
 		else
-			call s:EchoSearchPattern(a:searchType, a:pattern, a:isBackward)
+			call s:EchoSearchPattern(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
 		endif
 		return 1
 	else
@@ -977,7 +1008,7 @@ function! s:Search( pattern, count, isBackward, currentMarkPosition, searchType 
 		call s:MarkEnable(1)
 
 		if l:line > 0 && l:isStuckAtCurrentMark && l:isWrapped
-			call s:WrapMessage(a:searchType, a:pattern, a:isBackward)
+			call s:WrapMessage(s:EnrichSearchType(a:searchType), a:pattern, a:isBackward)
 			return 1
 		else
 			call s:ErrorMessage(a:searchType, a:pattern, a:isBackward)
@@ -996,7 +1027,7 @@ function! mark#SearchAnyMark( isBackward )
 	let l:markPosition = mark#CurrentMark()[1]
 	let l:markText = s:AnyMark()
 	let s:lastSearch = -1
-	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark-*')
+	return s:Search(l:markText, v:count1, a:isBackward, l:markPosition, 'mark*')
 endfunction
 
 " Search last searched mark.
@@ -1015,35 +1046,46 @@ endfunction
 
 
 " Load mark patterns from list.
-function! mark#Load( pattern, enabled )
-	if s:markNum > 0 && len(a:pattern) > 0
-		" Initialize mark patterns with the passed list. Ensure that, regardless of
-		" the list length, s:pattern contains exactly s:markNum elements.
-		let s:pattern = a:pattern[0:(s:markNum - 1)]
-		let s:pattern += repeat([''], (s:markNum - len(s:pattern)))
+function! mark#Load( marks, enabled )
+	if s:markNum > 0 && len(a:marks) > 0
+		" Initialize mark patterns (and optional names) with the passed list.
+		" Ensure that, regardless of the list length, s:pattern / s:names
+		" contain exactly s:markNum elements.
+		for l:index in range(s:markNum)
+			call s:DeserializeMark(get(a:marks, l:index, ''), l:index)
+		endfor
 
 		let s:enabled = a:enabled
 
 		call mark#UpdateScope()
 
 		" The list of patterns may be sparse, return only the actual patterns.
-		return len(filter(copy(a:pattern), '! empty(v:val)'))
+		return mark#GetCount()
 	endif
 	return 0
 endfunction
 
 " Access the list of mark patterns.
-function! mark#ToPatternList()
+function! s:SerializeMark( index )
+	return (empty(s:names[a:index]) ? s:pattern[a:index] : {'pattern': s:pattern[a:index], 'name': s:names[a:index]})
+endfunction
+function! s:Deserialize( mark )
+	return (type(a:mark) == type({}) ? [get(a:mark, 'pattern', ''), get(a:mark, 'name', '')] : [a:mark, ''])
+endfunction
+function! s:DeserializeMark( mark, index )
+	let [s:pattern[a:index], s:names[a:index]] = s:Deserialize(a:mark)
+endfunction
+function! mark#ToList()
 	" Trim unused patterns from the end of the list, the amount of available marks
 	" may differ on the next invocation (e.g. due to a different number of
 	" highlight groups in Vim and GVIM). We want to keep empty patterns in the
 	" front and middle to maintain the mapping to highlight groups, though.
 	let l:highestNonEmptyIndex = s:markNum - 1
-	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex])
+	while l:highestNonEmptyIndex >= 0 && empty(s:pattern[l:highestNonEmptyIndex]) && empty(s:names[l:highestNonEmptyIndex])
 		let l:highestNonEmptyIndex -= 1
 	endwhile
 
-	return (l:highestNonEmptyIndex < 0 ? [] : s:pattern[0 : l:highestNonEmptyIndex])
+	return (l:highestNonEmptyIndex < 0 ? [] : map(range(0, l:highestNonEmptyIndex), 's:SerializeMark(v:val)'))
 endfunction
 
 " Common functions for :MarkLoad and :MarkSave
@@ -1102,7 +1144,7 @@ endfunction
 
 " :MarkSave command.
 function! s:SavePattern( ... )
-	let l:savedMarks = mark#ToPatternList()
+	let l:savedMarks = mark#ToList()
 
 	if a:0
 		try
@@ -1140,7 +1182,7 @@ endfunction
 
 " :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
 function! mark#YankDefinitions( isOneLiner, register )
-	let l:marks = mark#ToPatternList()
+	let l:marks = mark#ToList()
 	if empty(l:marks)
 		return 0
 	endif
@@ -1148,13 +1190,34 @@ function! mark#YankDefinitions( isOneLiner, register )
 	let l:commands = []
 	for l:i in range(len(l:marks))
 		if ! empty(l:marks[l:i])
-			call add(l:commands, printf('%dMark! /%s/', l:i + 1, escape(l:marks[l:i], '/'))
+			let [l:pattern, l:name] = s:Deserialize(l:marks[l:i])
+			call add(l:commands, printf('%dMark! /%s/%s', l:i + 1, escape(l:pattern, '/'), (empty(l:name) ? '' : ' as ' . l:name)))
 		endif
 	endfor
 
 	let l:command = (a:isOneLiner ? join(map(l:commands, '"exe " . string(v:val)'), ' | ') : join(l:commands, "\n"))
 	call setreg(a:register, l:command)
 
+	return 1
+endfunction
+
+" :MarkName command.
+function! s:HasNamedMarks()
+	return (! empty(filter(copy(s:names), '! empty(v:val)')))
+endfunction
+function! mark#SetName( isClearAll, groupNum, name )
+	if a:isClearAll
+		if a:groupNum != 0
+			call ingo#err#Set('Use either [!] to clear all names, or [N] to name a single group, but not both.')
+			return 0
+		endif
+		let s:names = repeat([''], s:markNum)
+	elseif a:groupNum > s:markNum
+		call ingo#err#Set(printf('Only %d mark highlight groups', s:markNum))
+		return 0
+	else
+		let s:names[a:groupNum - 1] = a:name
+	endif
 	return 1
 endfunction
 
@@ -1216,25 +1279,29 @@ endfunction
 
 " :Marks command.
 function! mark#List()
+	let l:hasNamedMarks = s:HasNamedMarks()
 	echohl Title
-	echo 'mark  cnt  Pattern'
+	if l:hasNamedMarks
+		echo "group:name\tpattern"
+	else
+		echo 'group     pattern'
+	endif
 	echohl None
-	echon '  (> next mark group   / current search mark)'
+	echon '   (N) # of alternatives   > next mark group    / current search mark'
 	let l:nextGroupIndex = s:GetNextGroupIndex()
 	for i in range(s:markNum)
 		execute 'echohl MarkWord' . (i + 1)
-		let c = s:GetAlternativeCount(s:pattern[i])
-		echo printf('%1s%3d%4s %s', s:GetMarker(i, l:nextGroupIndex), (i + 1), (c > 1 ? '('.c.')' : ''), s:pattern[i])
+		let l:alternativeCount = s:GetAlternativeCount(s:pattern[i])
+		let l:alternativeCountString = (l:alternativeCount > 1 ? ' (' . l:alternativeCount . ')' : '')
+		let [l:name, l:format] = (empty(s:names[i]) ? ['', '%-4s'] : [':' . s:names[i], '%-10s'])
+		echo printf('%1s%3d' . l:format . ' ', s:GetMarker(i, l:nextGroupIndex), (i + 1), l:name . l:alternativeCountString)
 		echohl None
+		echon (l:hasNamedMarks ? "\t" : ' ') . s:pattern[i]
 	endfor
 
 	if ! s:enabled
 		echo 'Marks are currently disabled.'
 	endif
-endfunction
-
-function! mark#GetGroupNum()
-	return s:markNum
 endfunction
 
 
@@ -1249,7 +1316,7 @@ function! mark#Complete( ArgLead, CmdLine, CursorPos )
 	" Complete from the command's mark group, or all groups when none is
 	" specified.
 	let l:groupNum = 0 + l:matches[1]
-	let l:patterns =(l:groupNum == 0 || empty(get(s:pattern, l:groupNum - 1, '')) ? filter(copy(s:pattern), '! empty(v:val)') : [s:pattern[l:groupNum - 1]])
+	let l:patterns =(l:groupNum == 0 || empty(get(s:pattern, l:groupNum - 1, '')) ? s:GetUsedPatterns() : [s:pattern[l:groupNum - 1]])
 
 	" Complete both the entire pattern as well as its individual alternatives.
 	let l:expandedPatterns = []
@@ -1267,6 +1334,8 @@ function! mark#Complete( ArgLead, CmdLine, CursorPos )
 		endif
 	endfor
 
+	call map(l:expandedPatterns, '"/" . escape(v:val, "/") . "/"')
+
 	" Filter according to the argument lead. Allow to omit the frequent initial
 	" \< atom in the lead.
 	return filter(l:expandedPatterns, "v:val =~ '^\\%(\\\\<\\)\\?\\V' . " . string(escape(a:ArgLead, '\')))
@@ -1276,8 +1345,16 @@ endfunction
 "- integrations ----------------------------------------------------------------
 
 " Access the number of possible marks.
-function! mark#GetNum()
+function! mark#GetGroupNum()
 	return s:markNum
+endfunction
+
+" Access the number of defined marks.
+function! s:GetUsedPatterns()
+	return filter(copy(s:pattern), '! empty(v:val)')
+endfunction
+function! mark#GetCount()
+	return len(s:GetUsedPatterns())
 endfunction
 
 " Access the current / passed index pattern.
@@ -1305,6 +1382,7 @@ function! mark#Init()
 		let s:markNum += 1
 	endwhile
 	let s:pattern = repeat([''], s:markNum)
+	let s:names = repeat([''], s:markNum)
 	let s:cycle = 0
 	let s:lastSearch = -1
 	let s:enabled = 1
@@ -1318,6 +1396,7 @@ function! mark#ReInit( newMarkNum )
 
 		" Truncate the mark patterns.
 		let s:pattern = s:pattern[0 : (a:newMarkNum - 1)]
+		let s:names = s:names[0 : (a:newMarkNum - 1)]
 
 		" Correct any indices.
 		let s:cycle = min([s:cycle, (a:newMarkNum - 1)])
@@ -1325,6 +1404,7 @@ function! mark#ReInit( newMarkNum )
 	elseif a:newMarkNum > s:markNum " There are more marks than before.
 		" Expand the mark patterns.
 		let s:pattern += repeat([''], (a:newMarkNum - s:markNum))
+		let s:names += repeat([''], (a:newMarkNum - s:markNum))
 	endif
 
 	let s:markNum = a:newMarkNum
