@@ -15,9 +15,14 @@
 "	- mark/palettes.vim autoload script for additional palettes
 "	- mark/cascade.vim autoload script for cascading search
 "	- ingo/err.vim autoload script
+"	- ingo/msg.vim autoload script
 "
 " Version:     3.0.0
 " Changes:
+" 26-May-2015, Ingo Karkat
+" - ENH: Add :MarkName command.
+" - Use ingo/msg.vim.
+"
 " 19-May-2015, Ingo Karkat
 " - Properly abort on error by using :echoerr. Use ingo/err.vim for the
 "   implementation.
@@ -316,10 +321,7 @@ function! s:GetPalette()
 	endif
 	if ! has_key(g:mwPalettes, g:mwDefaultHighlightingPalette)
 		if ! empty(g:mwDefaultHighlightingPalette)
-			let v:warningmsg = 'Mark: Unknown value for g:mwDefaultHighlightingPalette: ' . g:mwDefaultHighlightingPalette
-			echohl WarningMsg
-			echomsg v:warningmsg
-			echohl None
+			call ingo#msg#WarningMsg('Mark: Unknown value for g:mwDefaultHighlightingPalette: ' . g:mwDefaultHighlightingPalette)
 		endif
 
 		return []
@@ -330,10 +332,7 @@ function! s:GetPalette()
 	elseif type(g:mwPalettes[g:mwDefaultHighlightingPalette]) == type(function('tr'))
 		return call(g:mwPalettes[g:mwDefaultHighlightingPalette], [])
 	else
-		let v:errmsg = printf('Mark: Invalid value type for g:mwPalettes[%s]', g:mwDefaultHighlightingPalette)
-		echohl ErrorMsg
-		echomsg v:errmsg
-		echohl None
+		call ingo#msg#ErrorMsg(printf('Mark: Invalid value type for g:mwPalettes[%s]', g:mwDefaultHighlightingPalette))
 		return []
 	endif
 endfunction
@@ -484,6 +483,7 @@ function! s:MarkPaletteComplete( ArgLead, CmdLine, CursorPos )
 	return sort(filter(keys(g:mwPalettes), 'v:val =~ ''\V\^'' . escape(a:ArgLead, "\\")'))
 endfunction
 command! -bar -nargs=1 -complete=customlist,<SID>MarkPaletteComplete MarkPalette call <SID>SetPalette(<q-args>)
+command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
 
 
 
