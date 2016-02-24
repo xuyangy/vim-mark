@@ -1,15 +1,25 @@
 " mark/cascade.vim: Cascading search through all used mark groups.
 "
 " DEPENDENCIES:
-"   - mark.vim autoload script
+"	- mark.vim autoload script
+"	- ingo/err.vim autoload script
+"	- ingo/msg.vim autoload script
 "
 " Copyright: (C) 2015 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
-" Version:     2.9.0
+" Version:     3.0.0
 " Changes:
+" 19-May-2015, Ingo Karkat
+" - Add case for reversing search direction immediately after a cascade to the
+"   next group.
+" - Store visited buffers, and instead of re-searching such with the current
+"   mark group, cascade to the next one. This allows sequential iteration by
+"   mark group over multiple buffers.
+" - Retire mark#WarningMsg().
+"
 " 18-May-2015, Ingo Karkat
 " - Change jumping behavior when starting cascade.
 " - Fix off-by-one switch in mark group in cascading search when reversing
@@ -31,6 +41,7 @@ function! mark#cascade#Start( count, isStopBeforeCascade )
 	" Try passed mark group, current mark, last search, first used mark group, in that order.
 
 	let s:cascadingIsBackward = -1
+	let s:cascadingVisitedBuffers = {}
 	call s:SetCascade()
 	if (! a:count && s:cascadingGroupIndex != -1) || (a:count && s:cascadingGroupIndex + 1 == a:count)
 		" We're already on a mark [with its group corresponding to count]. Take
@@ -57,19 +68,28 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 	endif
 
 	if s:cascadingGroupIndex == -1
-		call mark#ErrorMsg('No cascaded search defined')
+		call ingo#err#Set('No cascaded search defined')
 		return 0
+	elseif get(s:cascadingVisitedBuffers, bufnr(''), -1) == s:cascadingGroupIndex && s:cascadingLocation != s:GetLocation()
+		" We've returned to a buffer that had previously already been searched
+		" for the current mark. Instead of searching again, cascade to the next
+		" group.
+		let s:cascadingLocation = s:GetLocation()
+		return s:Cascade(a:count, 0, a:isBackward)
 	elseif s:cascadingStop != -1
 		if s:cascadingLocation == s:GetLocation()
 			" Within the same location: Switch to the next mark group.
-			let s:cascadingGroupIndex = s:cascadingStop
-			let s:cascadingIsBackward = a:isBackward
+			call s:SwitchToNextGroup(s:cascadingStop, a:isBackward)
 		else
 			" Allow to continue searching for the current mark group in other
 			" locations.
+			call s:ClearLocationAndPosition()
 		endif
 		let s:cascadingStop = -1
-		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
+	elseif s:cascadingIsBackward != a:isBackward && s:cascadingLocation == s:GetLocation() && s:cascadingPosition == getpos('.')[1:2]
+		" We've just cascaded to the next mark group, and now want back to the
+		" previous one (by reversing search direction).
+		return s:Cascade(a:count, a:isStopBeforeCascade, a:isBackward)
 	endif
 
 	let l:save_wrapscan = &wrapscan
@@ -94,7 +114,7 @@ function! mark#cascade#Next( count, isStopBeforeCascade, isBackward )
 					" match in the reversed direction, and set its position and
 					" direction, then stay put here.
 					let l:save_view = winsaveview()
-						call mark#SearchGroupMark(s:cascadingGroupIndex + 1, 1, a:isBackward, 1)
+						silent call mark#SearchGroupMark(s:cascadingGroupIndex + 1, 1, a:isBackward, 1)
 						let s:cascadingPosition = getpos('.')[1:2]
 						let s:cascadingIsBackward = a:isBackward
 					call winrestview(l:save_view)
@@ -116,21 +136,28 @@ function! s:Cascade( count, isStopBeforeCascade, isBackward )
 	let l:nextGroupIndex = mark#NextUsedGroupIndex(a:isBackward, 0, s:cascadingGroupIndex, 1)
 	if l:nextGroupIndex == -1
 		redraw  " Get rid of the previous mark search message.
-		call mark#ErrorMsg(printf('Cascaded search ended with %s used group', (a:isBackward ? 'first' : 'last')))
+		call ingo#err#Set(printf('Cascaded search ended with %s used group', (a:isBackward ? 'first' : 'last')))
 		return 0
 	endif
 
+	let s:cascadingVisitedBuffers[bufnr('')] = s:cascadingGroupIndex
 	if a:isStopBeforeCascade
 		let s:cascadingStop = l:nextGroupIndex
 		redraw  " Get rid of the previous mark search message.
-		call mark#WarningMsg('Cascaded search reached last match of current group')
+		call ingo#msg#WarningMsg('Cascaded search reached last match of current group')
 		return 1
 	else
-		let s:cascadingGroupIndex = l:nextGroupIndex
-		let s:cascadingIsBackward = a:isBackward
-		let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
+		call s:SwitchToNextGroup(l:nextGroupIndex, a:isBackward)
 		return mark#cascade#Next(a:count, a:isStopBeforeCascade, a:isBackward)
 	endif
+endfunction
+function! s:SwitchToNextGroup( nextGroupIndex, isBackward )
+	let s:cascadingGroupIndex = a:nextGroupIndex
+	let s:cascadingIsBackward = a:isBackward
+	call s:ClearLocationAndPosition()
+endfunction
+function! s:ClearLocationAndPosition()
+	let [s:cascadingLocation, s:cascadingPosition] = [[], []]   " Clear so that the next mark match will re-initialize them with the base match for the new mark group.
 endfunction
 
 " vim: ts=4 sts=0 sw=4 noet
