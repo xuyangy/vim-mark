@@ -238,8 +238,8 @@ You can also initialize some marks (even using particular highlight groups) to
 static values, e.g. by including this in |vimrc|: >
     runtime plugin/mark.vim
     silent MarkClear
-    5Mark foo
-    6Mark /bar/
+    silent 5Mark foo
+    silent 6Mark /bar/
 Or you can define custom commands that preset certain marks: >
     command -bar MyMarks exe '5Mark! foo' | exe '6Mark! /bar/'
 Or a command that adds to the existing marks and then toggles them: >
@@ -752,7 +752,7 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2008-2015 Ingo Karkat
+Copyright: (C) 2008-2016 Ingo Karkat
            (C) 2005-2008 Yuheng Xie
 The VIM LICENSE applies to this plugin; see |copyright|.
 
