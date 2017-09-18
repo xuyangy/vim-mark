@@ -466,7 +466,7 @@ TODO								   *mark-todo*
 
 IDEAS								  *mark-ideas*
 
-CONTRIBUTING			*mark-contribute*
+CONTRIBUTING						     *mark-contribute*
 
 Report any bugs, send patches, or suggest features via the issue tracker at
 https://github.com/inkarkat/vim-mark/issues or email (address below).
