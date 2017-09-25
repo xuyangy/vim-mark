@@ -55,6 +55,9 @@ plugin offers the following advantages over the original:
   8 different slots in all buffers.
 - searchmatch ([vimscript #4869](http://www.vim.org/scripts/script.php?script_id=4869)) has commands and mappings for :[1,2,3]match,
   in the current window only.
+- highlight-groups.vim ([vimscript #5612](http://www.vim.org/scripts/script.php?script_id=5612)) can do buffer-local as well as
+  tab-scoped highlighting via :syntax, and has multiple groups whose
+  highlighting is defined in an external CSV file.
 
 USAGE
 ------------------------------------------------------------------------------
