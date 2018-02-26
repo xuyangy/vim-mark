@@ -319,6 +319,10 @@ Or, if you have both good eyes and display, you can try a palette that defines
 
     let g:mwDefaultHighlightingPalette = 'maximum'
 
+Note: This only works for built-in palettes and those that you define prior to
+running the plugin. If you extend the built-ins after plugin initialization
+(mark-palette-define), use :MarkPalette instead.
+
 If you like the additional colors, but don't need that many of them, restrict
 their number via:
 
@@ -342,18 +346,36 @@ use the plugin's infrastructure:
     \]
 
 If you want to switch multiple palettes during runtime, you need to define
-them as proper palettes:
+them as proper palettes.
+a) To add your palette to the existing ones, do this _after_ the default
+   palette has been defined (e.g. in ~/.vim/after/plugin/mark.vim):
+
+    if ! exists('g:mwPalettes') " (Optional) guard if the plugin isn't properly installed.
+        finish
+    endif
 
     let g:mwPalettes['mypalette'] = [
     \   { 'ctermbg':'Cyan', 'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
     \   ...
     \]
     let g:mwPalettes['other'] = [ ... ]
-    let g:mwDefaultHighlightingPalette = 'mypalette'
 
-To add your palette to the existing ones, do this after the default palette
-has been defined, e.g. in .vim/after/plugin/mark.vim). Alternatively, you can
-also completely redefine all available palettes in .vimrc.
+    " Make it the default; you cannot use g:mwDefaultHighlightingPalette
+    here, as the Mark plugin has already been initialized:
+    MarkPalette mypalette
+
+b) Alternatively, you can completely override all built-in palettes in your
+   vimrc:
+
+    let g:mwDefaultHighlightingPalette = {
+    \   'mypalette': [
+    \       { 'ctermbg':'Cyan', 'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
+    \       ...
+    \   ]
+    \}
+
+    " Make it the default:
+    let g:mwDefaultHighlightingPalette = 'mypalette'
 
 The search type highlighting (in the search message) can be changed via:
 
@@ -764,7 +786,7 @@ HISTORY
 - Initial version published by Yuheng Xie on vim.org.
 
 ------------------------------------------------------------------------------
-Copyright: (C) 2008-2017 Ingo Karkat -
+Copyright: (C) 2008-2018 Ingo Karkat -
            (C) 2005-2008 Yuheng Xie -
 The [VIM LICENSE](http://vimdoc.sourceforge.net/htmldoc/uganda.html#license) applies to this plugin.
 
