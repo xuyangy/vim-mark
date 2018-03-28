@@ -373,7 +373,7 @@ a) To add your palette to the existing ones, do this _after_ the default
     MarkPalette mypalette
 b) Alternatively, you can completely override all built-in palettes in your
    |vimrc|: >
-    let g:mwDefaultHighlightingPalette = {
+    let g:mwPalettes = {
     \	'mypalette': [
     \	    { 'ctermbg':'Cyan', 'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
     \	    ...
