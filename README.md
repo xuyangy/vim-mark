@@ -58,6 +58,9 @@ plugin offers the following advantages over the original:
 - highlight-groups.vim ([vimscript #5612](http://www.vim.org/scripts/script.php?script_id=5612)) can do buffer-local as well as
   tab-scoped highlighting via :syntax, and has multiple groups whose
   highlighting is defined in an external CSV file.
+- Syntax match ([vimscript #5376](http://www.vim.org/scripts/script.php?script_id=5376)) provides various (color-based) shortcut
+  commands for :syntax match, and saves and restores those definitions, for
+  text and log files.
 
 USAGE
 ------------------------------------------------------------------------------
@@ -367,7 +370,7 @@ a) To add your palette to the existing ones, do this _after_ the default
 b) Alternatively, you can completely override all built-in palettes in your
    vimrc:
 
-    let g:mwDefaultHighlightingPalette = {
+    let g:mwPalettes = {
     \   'mypalette': [
     \       { 'ctermbg':'Cyan', 'ctermfg':'Black', 'guibg':'#8CCBEA', 'guifg':'Black' },
     \       ...

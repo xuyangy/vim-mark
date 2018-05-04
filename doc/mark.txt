@@ -68,6 +68,9 @@ RELATED WORKS								     *
 - highlight-groups.vim (vimscript #5612) can do buffer-local as well as
   tab-scoped highlighting via :syntax, and has multiple groups whose
   highlighting is defined in an external CSV file.
+- Syntax match (vimscript #5376) provides various (color-based) shortcut
+  commands for :syntax match, and saves and restores those definitions, for
+  text and log files.
 
 ==============================================================================
 USAGE								  *mark-usage*
