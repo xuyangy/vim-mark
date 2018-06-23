@@ -228,10 +228,13 @@ file. For this to work, the "!" flag must be part of the 'viminfo' setting: >
 			use in a future Vim session.
 :MarkSave {slot}	Save the currently defined marks in the named {slot}.
 			If {slot} is all UPPERCASE, the marks are persisted
-			and can be |:MarkLoad|ed in a future Vim session;
-			otherwise, you can just recall within the current
-			session. When no marks are currently defined, the
-			{slot} is cleared.
+			and can be |:MarkLoad|ed in a future Vim session (to
+			persist without closing Vim, use |:wviminfo|; an
+			already running Vim session can import marks via
+			|:rviminfo| followed by |:MarkLoad|).
+			If {slot} contains lowercase letters, you can just
+			recall within the current session. When no marks are
+			currently defined, the {slot} is cleared.
 
 By default, automatic persistence is enabled (so you don't need to explicitly
 |:MarkSave|), but you have to explicitly load the persisted marks in a new Vim
