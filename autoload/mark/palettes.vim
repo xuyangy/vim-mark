@@ -2,17 +2,13 @@
 "
 " DEPENDENCIES:
 "
-" Copyright: (C) 2012 Ingo Karkat
+" Copyright: (C) 2012-2018 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 " Contributors: rockybalboa4
 "
 " Version:     2.7.0
-" Changes:
-" 04-Jul-2012, Ingo Karkat
-" - Add "maximum" palette contributed by rockybalboa4 and move it and the
-"   "extended" palette to a separate mark/palettes.vim autoload script.
 
 function! mark#palettes#Extended()
 	return [
