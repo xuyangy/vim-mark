@@ -1,19 +1,23 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2008-2015 Ingo Karkat
+" Copyright:   (C) 2008-2018 Ingo Karkat
 "              (C) 2005-2008 Yuheng Xie
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:  Ingo Karkat <ingo@karkat.de>
 "
-" Dependencies:
+" DEPENDENCIES:
+"   - ingo/cmdargs/pattern.vim autoload script
+"   - ingo/err.vim autoload script
+"   - ingo/msg.vim autoload script
+"   - ingo/regexp/split.vim autoload script
 "	- ingo/cmdargs/pattern.vim autoload script
 "	- ingo/err.vim autoload script
 "	- ingo/msg.vim autoload script
 "	- SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     3.0.0
+" Version:     3.0.1
 " Changes:
 " 26-May-2015 Ingo Karkat
 " - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}.
@@ -617,7 +621,7 @@ function! s:EchoMarksDisabled()
 endfunction
 
 function! s:SplitIntoAlternatives( pattern )
-	return split(a:pattern, '\%(\%(^\|[^\\]\)\%(\\\\\)*\\\)\@<!\\|')
+	return ingo#regexp#split#TopLevelBranches(a:pattern)
 endfunction
 
 " Return [success, markGroupNum]. success is true when the mark has been set or
