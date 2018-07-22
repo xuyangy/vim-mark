@@ -12,10 +12,7 @@
 "   - ingo/err.vim autoload script
 "   - ingo/msg.vim autoload script
 "   - ingo/regexp/split.vim autoload script
-"	- ingo/cmdargs/pattern.vim autoload script
-"	- ingo/err.vim autoload script
-"	- ingo/msg.vim autoload script
-"	- SearchSpecial.vim autoload script (optional, for improved search messages).
+"   - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
 " Version:     3.0.1
 
