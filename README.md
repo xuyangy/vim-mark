@@ -303,7 +303,7 @@ To uninstall, use the :RmVimball command.
 ### DEPENDENCIES
 
 - Requires Vim 7.1 with matchadd(), or Vim 7.2 or higher.
-- Requires the ingo-library.vim plugin ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)), version 1.034 or
+- Requires the ingo-library.vim plugin ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)), version 1.035 or
   higher.
 
 CONFIGURATION
@@ -506,7 +506,7 @@ HISTORY
 ##### 3.0.1   RELEASEME
 - ENH: Handle magicness atoms (\V, \m) in regexps entered via <Leader>r or
   :Mark /{pattern}/.
-  __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.034!__
+  __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017
 - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}. This
