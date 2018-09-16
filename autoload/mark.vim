@@ -11,6 +11,7 @@
 "   - ingo/cmdargs/pattern.vim autoload script
 "   - ingo/err.vim autoload script
 "   - ingo/msg.vim autoload script
+"   - ingo/regexp/magic.vim autoload script
 "   - ingo/regexp/split.vim autoload script
 "   - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
@@ -106,7 +107,7 @@ function! mark#MarkRegex( groupNum, regexpPreset )
 	endif
 
 	redraw " This is necessary when the user is queried for the mark group.
-	return mark#DoMarkAndSetCurrent(a:groupNum, l:regexp)[0]
+	return mark#DoMarkAndSetCurrent(a:groupNum, ingo#regexp#magic#Normalize(l:regexp))[0]
 endfunction
 
 function! s:Cycle( ... )
@@ -495,6 +496,7 @@ function! mark#SetMark( groupNum, ... )
 	endif
 	if a:0
 		let [l:pattern, l:nameArgument] = ingo#cmdargs#pattern#ParseUnescapedWithLiteralWholeWord(a:1, '\(\s\+as\%(\s\+\(.\{-}\)\)\?\)\?\s*')
+		let l:pattern = ingo#regexp#magic#Normalize(l:pattern)  " We'd strictly only have to do this for /{pattern}/, not for whole word(s), but as the latter doesn't contain magicness atoms, it doesn't hurt, and with this we don't need to explicitly distinguish between the two cases.
 		if ! empty(l:nameArgument)
 			let l:name = substitute(l:nameArgument, '^\s\+as\s*', '', '')
 			return mark#DoMarkAndSetCurrent(a:groupNum, l:pattern, l:name)

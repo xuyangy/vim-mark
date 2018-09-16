@@ -303,7 +303,7 @@ To uninstall, use the :RmVimball command.
 ### DEPENDENCIES
 
 - Requires Vim 7.1 with matchadd(), or Vim 7.2 or higher.
-- Requires the ingo-library.vim plugin ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)), version 1.020 or
+- Requires the ingo-library.vim plugin ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)), version 1.034 or
   higher.
 
 CONFIGURATION
@@ -492,9 +492,8 @@ LIMITATIONS
 - If the 'ignorecase' setting is changed, there will be discrepancies between
   the highlighted marks and subsequent jumps to marks.
 - If {pattern} in a :Mark command contains atoms that change the semantics of
-  the entire (/\c, /\C) or following (/\v|,|/\V, /\M) regular
-  expression, there may be discrepancies between the highlighted marks and
-  subsequent jumps to marks.
+  the entire (/\c, /\C) regular expression, there may be discrepancies
+  between the highlighted marks and subsequent jumps to marks.
 
 ### CONTRIBUTING
 
@@ -503,6 +502,11 @@ https://github.com/inkarkat/vim-mark/issues or email (address below).
 
 HISTORY
 ------------------------------------------------------------------------------
+
+##### 3.0.1   RELEASEME
+- ENH: Handle magicness atoms (\V, \m) in regexps entered via <Leader>r or
+  :Mark /{pattern}/.
+  __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.034!__
 
 ##### 3.0.0   18-Sep-2017
 - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}. This
