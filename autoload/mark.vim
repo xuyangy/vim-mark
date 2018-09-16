@@ -16,7 +16,7 @@
 "   - ingo/regexp/split.vim autoload script
 "   - SearchSpecial.vim autoload script (optional, for improved search messages).
 "
-" Version:     3.0.1
+" Version:     3.1.0
 
 "- functions ------------------------------------------------------------------
 
@@ -415,10 +415,9 @@ function! mark#DoMark( groupNum, ... )
 		" by the passed highlight group number.
 		let existingPattern = s:pattern[l:groupNum - 1]
 		if ! empty(existingPattern)
-			" Split only on \|, but not on \\|.
 			let alternatives = s:SplitIntoAlternatives(existingPattern)
 			if index(alternatives, regexp) == -1
-				let regexp = existingPattern . '\|' . regexp
+				let regexp = join(ingo#regexp#split#AddPatternByProjectedMatchLength(alternatives, regexp), '\|')
 			else
 				let regexp = join(filter(alternatives, 'v:val !=# regexp'), '\|')
 				if empty(regexp)

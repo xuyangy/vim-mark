@@ -503,9 +503,12 @@ https://github.com/inkarkat/vim-mark/issues or email (address below).
 HISTORY
 ------------------------------------------------------------------------------
 
-##### 3.0.1   RELEASEME
+##### 3.1.0   RELEASEME
 - ENH: Handle magicness atoms (\V, \m) in regexps entered via <Leader>r or
   :Mark /{pattern}/.
+- ENH: Choose a more correct insertion point with multiple alternatives for a
+  mark by projecting the length of the existing and alternatives and the added
+  pattern.
   __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017
