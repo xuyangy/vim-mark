@@ -197,9 +197,12 @@ it's not the last mark used.
 			belonging to highlight group 1..9.
 <C-k1> .. <C-k9>	Jump to the [count]'th previous occurrence of the mark
 			belonging to highlight group 1..9.
-			Note that these commands only work when the "Num Lock"
-			indicator of your keyboard is ON; otherwise, the
-			keypad is used for cursor movement.
+			Note that these commands only work in GVIM or if your
+			terminal sends different key codes; sadly, most still
+			don't. The "Num Lock" indicator of your keyboard has
+			to be ON; otherwise, the keypad is used for cursor
+			movement. If the keypad doesn't work for you, you can
+			still remap these mappings to alternatives; see below.
 Alternatively, you can set up mappings to search in a next / previous used
 group, see |mark-group-cycle|.
 
