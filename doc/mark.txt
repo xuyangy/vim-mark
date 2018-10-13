@@ -268,7 +268,12 @@ The following commands help with setting these up:
 			Like |:MarkYankDefinitions|, but place all definitions
 			into a single line, like this: >
 			exe '1Mark! /\<foo\>/' | exe '2Mark! /bar/' | exe '9Mark! /quux/'
-<
+Alternatively, the mark#GetDefinitionCommands(isOneLiner) function can be used
+to obtain a List of |:Mark| commands instead of using a register. With that,
+you could for example build a custom alternative to |:MarkSave| that stores
+Marks in separate files (using |writefile()|, read by |:source| or even
+automatically via a local vimrc plugin) instead of the |viminfo| file.
+
 MARK INFORMATION					    *mark-information*
 
 Both |mark-highlighting| and |mark-searching| commands print information about
