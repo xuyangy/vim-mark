@@ -921,6 +921,7 @@ endfunction
 function! mark#YankDefinitions( isOneLiner, register )
 	let l:marks = mark#ToList()
 	if empty(l:marks)
+		call ingo#err#Set('No marks defined')
 		return 0
 	endif
 

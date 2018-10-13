@@ -217,8 +217,8 @@ command! -bar Marks call mark#List()
 
 command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad if ! mark#LoadCommand(1, <f-args>) | echoerr ingo#err#Get() | endif
 command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave if ! mark#SaveCommand(<f-args>) | echoerr ingo#err#Get() | endif
-command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr 'No marks defined' | endif
-command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr 'No marks defined' | endif
+command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr ingo#err#Get()| endif
+command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr ingo#err#Get()| endif
 function! s:SetPalette( paletteName )
 	if type(g:mwDefaultHighlightingPalette) == type([])
 		" Convert the directly defined list to a palette named "default".
