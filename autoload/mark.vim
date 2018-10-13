@@ -918,11 +918,10 @@ function! mark#SaveCommand( ... )
 endfunction
 
 " :MarkYankDefinitions and :MarkYankDefinitionsOneLiner commands.
-function! mark#YankDefinitions( isOneLiner, register )
+function! mark#GetDefinitionCommands( isOneLiner )
 	let l:marks = mark#ToList()
 	if empty(l:marks)
-		call ingo#err#Set('No marks defined')
-		return 0
+		return ''
 	endif
 
 	let l:commands = []
@@ -933,10 +932,16 @@ function! mark#YankDefinitions( isOneLiner, register )
 		endif
 	endfor
 
-	let l:command = (a:isOneLiner ? join(map(l:commands, '"exe " . string(v:val)'), ' | ') : join(l:commands, "\n"))
-	call setreg(a:register, l:command)
+	return (a:isOneLiner ? join(map(l:commands, '"exe " . string(v:val)'), ' | ') : join(l:commands, "\n"))
+endfunction
+function! mark#YankDefinitions( isOneLiner, register )
+	let l:command = mark#GetDefinitionCommands(a:isOneLiner)
+	if empty(l:command)
+		call ingo#err#Set('No marks defined')
+		return 0
+	endif
 
-	return 1
+	return ! setreg(a:register, l:command)
 endfunction
 
 " :MarkName command.
