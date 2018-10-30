@@ -517,6 +517,8 @@ HISTORY
 - ENH: Choose a more correct insertion point with multiple alternatives for a
   mark by projecting the length of the existing and alternatives and the added
   pattern.
+- BUG: Regression: <Leader>n without {N} and not on an existing mark prints
+  error "Do not pass empty pattern to disable all marks".
   __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017
