@@ -274,6 +274,9 @@ endfunction
 
 
 " Mark or unmark a regular expression.
+function! mark#Clear( groupNum )
+	return mark#DoMark(a:groupNum, (a:groupNum ? '' : mark#CurrentMark()[0]))[0]
+endfunction
 function! s:SetPattern( index, pattern )
 	let s:pattern[a:index] = a:pattern
 
