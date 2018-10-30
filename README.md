@@ -415,6 +415,30 @@ override the default behavior of using 'ignorecase' by setting:
 
         let g:mwIgnoreCase = 0
 
+To exclude some tab pages, windows, or buffers / filetypes from showing mark
+highlightings (you can still "blindly" navigate to marks in there with the
+corresponding mappings), you can define a List of expressions or Funcrefs that
+are evaluated in every window; if one returns 1, the window will not show
+marks.
+
+    " Don't mark temp files, Python filetype, and scratch files as defined by
+    " a custom function.
+    let g:mwExclusionPredicates =
+    \   ['expand("%:p") =~# "/tmp"', '&filetype == "python", function('ExcludeScratchFiles')]
+
+By default, tab pages / windows / buffers that have t:nomarks / w:nomarks /
+b:nomarks with a true value are excluded. Therefore, to suppress mark
+highlighting in a buffer, you can simply
+
+    :let b:nomarks = 1
+
+If the predicate changes after a window has already been visible, you can
+update the mark highlighting by either:
+- switching tab pages back and forth
+- toggling marks on / off (via <Plug>MarkToggle)
+- :call mark#UpdateMark() (for current buffer)
+- :call mark#UpdateScope() (for all windows in the current tab page)
+
 You can use different mappings by mapping to the <Plug>Mark... mappings (use
 ":map <Plug>Mark" to list them all) before this plugin is sourced.
 
@@ -519,6 +543,9 @@ HISTORY
   pattern.
 - BUG: Regression: <Leader>n without {N} and not on an existing mark prints
   error "Do not pass empty pattern to disable all marks".
+- ENH: Allow to exclude certain tab pages, windows, or buffers / filetypes
+  from showing mark highlightings via g:mwExclusionPredicates or (with the
+  default predicate) t:nomarks / w:nomarks / b:nomarks flags.
   __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017

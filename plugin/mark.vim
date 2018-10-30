@@ -66,6 +66,10 @@ if ! exists('g:mwDirectGroupJumpMappingNum')
 	let g:mwDirectGroupJumpMappingNum = 9
 endif
 
+if ! exists('g:mwExclusionPredicates')
+	let g:mwExclusionPredicates = [function('mark#DefaultExclusionPredicate')]
+endif
+
 
 "- default highlightings ------------------------------------------------------
 

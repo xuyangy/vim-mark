@@ -152,6 +152,10 @@ function! mark#NextUsedGroupIndex( isBackward, isWrapAround, startIndex, count )
 	return -1
 endfunction
 
+function! mark#DefaultExclusionPredicate()
+	return (exists('b:nomarks') && b:nomarks) || (exists('w:nomarks') && w:nomarks) || (exists('t:nomarks') && t:nomarks)
+endfunction
+
 " Set match / clear matches in the current window.
 function! s:MarkMatch( indices, expr )
 	if ! exists('w:mwMatch')
@@ -197,6 +201,16 @@ function! s:MarkMatch( indices, expr )
 endfunction
 " Initialize mark colors in a (new) window.
 function! mark#UpdateMark( ... )
+	for l:Predicate in g:mwExclusionPredicates
+		if ingo#actions#EvaluateOrFunc(l:Predicate)
+			" The window may have had marks applied previously. Clear any
+			" existing matches.
+			call s:MarkMatch(range(s:markNum), '')
+
+			return
+		endif
+	endfor
+
 	if a:0
 		call call('s:MarkMatch', a:000)
 	else
@@ -1117,6 +1131,7 @@ endfunction
 
 augroup Mark
 	autocmd!
+	autocmd BufWinEnter * call mark#UpdateMark()
 	autocmd WinEnter * if ! exists('w:mwMatch') | call mark#UpdateMark() | endif
 	autocmd TabEnter * call mark#UpdateScope()
 augroup END
