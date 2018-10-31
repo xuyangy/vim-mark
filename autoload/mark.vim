@@ -191,10 +191,8 @@ function! s:MarkMatch( indices, expr )
 		let l:expr = (s:IsIgnoreCase(a:expr) ? '\c' : '') . a:expr
 
 		" To avoid an arbitrary ordering of highlightings, we assign a different
-		" priority based on the highlight group, and ensure that the highest
-		" priority is -10, so that we do not override the 'hlsearch' of 0, and still
-		" allow other custom highlightings to sneak in between.
-		let l:priority = -10 - s:markNum + 1 + l:index
+		" priority based on the highlight group.
+		let l:priority = g:mwMaxMatchPriority - s:markNum + 1 + l:index
 
 		let w:mwMatch[l:index] = matchadd('MarkWord' . (l:index + 1), l:expr, l:priority)
 	endif

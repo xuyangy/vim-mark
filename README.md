@@ -439,6 +439,17 @@ update the mark highlighting by either:
 - :call mark#UpdateMark() (for current buffer)
 - :call mark#UpdateScope() (for all windows in the current tab page)
 
+This plugin uses matchadd() for the highlightings. Each mark group has its
+own priority, with higher group values having higher priority; i.e. going "on
+top". The maximum priority (used for the last defined mark group) can be
+changed via:
+
+    let g:mwMaxMatchPriority = -10
+
+For example when another plugin or customization also uses matches and you
+would like to change their relative priorities. The default is negative to
+step back behind the default search highlighting.
+
 You can use different mappings by mapping to the <Plug>Mark... mappings (use
 ":map <Plug>Mark" to list them all) before this plugin is sourced.
 
@@ -546,6 +557,8 @@ HISTORY
 - ENH: Allow to exclude certain tab pages, windows, or buffers / filetypes
   from showing mark highlightings via g:mwExclusionPredicates or (with the
   default predicate) t:nomarks / w:nomarks / b:nomarks flags.
+- ENH: Allow to tweak the maximum match priority via g:mwMaxMatchPriority for
+  better coexistence with other customizations that use :match / matchadd().
   __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017

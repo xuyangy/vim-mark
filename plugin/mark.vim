@@ -70,6 +70,13 @@ if ! exists('g:mwExclusionPredicates')
 	let g:mwExclusionPredicates = [function('mark#DefaultExclusionPredicate')]
 endif
 
+if ! exists('g:mwMaxMatchPriority')
+	" Default the highest match priority to -10, so that we do not override the
+	" 'hlsearch' of 0, and still allow other custom highlightings to sneak in
+	" between.
+	let g:mwMaxMatchPriority = -10
+endif
+
 
 "- default highlightings ------------------------------------------------------
 
