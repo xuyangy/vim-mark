@@ -1,4 +1,4 @@
-MARK   
+MARK
 ===============================================================================
 _by Ingo Karkat_
 _(original version by Yuheng Xie)_
@@ -198,7 +198,7 @@ USAGE
     a different starting point first). If you instead switch to another window or
     buffer, the current mark group continues to be searched (to allow you to
     keep searching for the current group in other locations, until those are all
-    exhaused, too).
+    exhausted too).
 
 ### MARK PERSISTENCE
 
@@ -320,7 +320,9 @@ CONFIGURATION
 For a permanent configuration, put the following commands into your vimrc.
 
 This plugin defines 6 mark groups:
+```
     1: Cyan  2:Green  3:Yellow  4:Red  5:Magenta  6:Blue
+```
 Higher numbers always take precedence and are displayed above lower ones.
 
 Especially if you use GVIM, you can switch to a richer palette of up to 18
@@ -459,7 +461,7 @@ command, but you can define some yourself:
     nmap <Leader>M <Plug>MarkToggle
     nmap <Leader>N <Plug>MarkAllClear
 
-As the latter is irreverible, there's also an alternative with an additional
+As the latter is irreversible, there's also an alternative with an additional
 confirmation:
 
     nmap <Leader>N <Plug>MarkConfirmAllClear
@@ -559,7 +561,8 @@ HISTORY
   default predicate) t:nomarks / w:nomarks / b:nomarks flags.
 - ENH: Allow to tweak the maximum match priority via g:mwMaxMatchPriority for
   better coexistence with other customizations that use :match / matchadd().
-  __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
+
+__You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
 ##### 3.0.0   18-Sep-2017
 - CHG: Parse :Mark arguments as either /{pattern}/ or whole {word}. This
@@ -586,7 +589,9 @@ HISTORY
   and persisted together with the marks. This makes it easier to handle
   several marks and enforce custom semantics for particular groups.
 - Properly abort on error by using :echoerr.
-- Add dependency to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)). __You need to separately
+- Add dependency to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)).
+
+__You need to separately
   install ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.020 (or higher)!__
 
 ##### 2.8.5   29-Oct-2014
@@ -672,7 +677,9 @@ HISTORY
 - ENH: When a [count] exceeding the number of available mark groups is given,
   a summary of marks is given and the user is asked to select a mark group.
   This allows to interactively choose a color via 99<Leader>m.
-  If you use the mark-whitespace-indifferent mappings, __PLEASE UPDATE THE
+  If you use the mark-whitespace-indifferent mappings,
+
+__PLEASE UPDATE THE
   vnoremap <Plug>MarkWhitespaceIndifferent DEFINITION__
 - ENH: Include count of alternative patterns in :Marks list.
 - CHG: Use ">" for next mark and "/" for last search in :Marks.
