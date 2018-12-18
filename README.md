@@ -452,6 +452,13 @@ For example when another plugin or customization also uses matches and you
 would like to change their relative priorities. The default is negative to
 step back behind the default search highlighting.
 
+If you want no or only a few of the available mappings, you can completely
+turn off the creation of the default mappings by defining:
+
+    :let g:mw_no_mappings = 1
+
+This saves you from mapping dummy keys to all unwanted mapping targets.
+
 You can use different mappings by mapping to the <Plug>Mark... mappings (use
 ":map <Plug>Mark" to list them all) before this plugin is sourced.
 
@@ -561,6 +568,8 @@ HISTORY
   default predicate) t:nomarks / w:nomarks / b:nomarks flags.
 - ENH: Allow to tweak the maximum match priority via g:mwMaxMatchPriority for
   better coexistence with other customizations that use :match / matchadd().
+- ENH: Allow to disable all default mappings via a single g:mw\_no\_mappings
+  configuration flag.
 
 __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 

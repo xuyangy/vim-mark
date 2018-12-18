@@ -224,6 +224,23 @@ nnoremap <silent> <Plug>MarkSearchCascadeStartNoStop    :<C-u>if ! mark#cascade#
 nnoremap <silent> <Plug>MarkSearchCascadeNextNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 0)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 nnoremap <silent> <Plug>MarkSearchCascadePrevNoStop     :<C-u>if ! mark#cascade#Next(v:count1, 0, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>
 
+function! s:MakeDirectGroupMappings( isDefineDefaultMappings )
+	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
+		for [l:isBackward, l:direction, l:keyModifier] in [[0, 'Next', ''], [1, 'Prev', 'C-']]
+			let l:plugMappingName = printf('<Plug>MarkSearchGroup%d%s', l:cnt, l:direction)
+			execute printf('nnoremap <silent> %s :<C-u>if ! mark#SearchGroupMark(%d, v:count1, %d, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>', l:plugMappingName, l:cnt, l:isBackward)
+			if a:isDefineDefaultMappings && ! hasmapto(l:plugMappingName, 'n')
+				execute printf('nmap <%sk%d> %s', l:keyModifier, l:cnt, l:plugMappingName)
+			endif
+		endfor
+	endfor
+endfunction
+call s:MakeDirectGroupMappings(! exists('g:mw_no_mappings'))
+delfunction s:MakeDirectGroupMappings
+
+if exists('g:mw_no_mappings')
+	finish
+endif
 
 if !hasmapto('<Plug>MarkSet', 'n')
 	nmap <unique> <Leader>m <Plug>MarkSet
@@ -271,20 +288,6 @@ endif
 " No default mapping for <Plug>MarkSearchGroupPrev
 " No default mapping for <Plug>MarkSearchUsedGroupNext
 " No default mapping for <Plug>MarkSearchUsedGroupPrev
-
-function! s:MakeDirectGroupMappings()
-	for l:cnt in range(1, g:mwDirectGroupJumpMappingNum)
-		for [l:isBackward, l:direction, l:keyModifier] in [[0, 'Next', ''], [1, 'Prev', 'C-']]
-			let l:plugMappingName = printf('<Plug>MarkSearchGroup%d%s', l:cnt, l:direction)
-			execute printf('nnoremap <silent> %s :<C-u>if ! mark#SearchGroupMark(%d, v:count1, %d, 1)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>echoerr ingo#err#Get()<Bar>endif<CR>', l:plugMappingName, l:cnt, l:isBackward)
-			if ! hasmapto(l:plugMappingName, 'n')
-				execute printf('nmap <%sk%d> %s', l:keyModifier, l:cnt, l:plugMappingName)
-			endif
-		endfor
-	endfor
-endfunction
-call s:MakeDirectGroupMappings()
-delfunction s:MakeDirectGroupMappings
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
