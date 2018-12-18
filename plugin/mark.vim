@@ -121,6 +121,74 @@ highlight def link SearchSpecialSearchType MoreMsg
 
 
 
+"- marks persistence ----------------------------------------------------------
+
+if g:mwAutoLoadMarks
+	" As the viminfo is only processed after sourcing of the runtime files, the
+	" persistent global variables are not yet available here. Defer this until Vim
+	" startup has completed.
+	function! s:AutoLoadMarks()
+		if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]'
+			if ! exists('g:MARK_ENABLED') || g:MARK_ENABLED
+				" There are persistent marks and they haven't been disabled; we need to
+				" show them right now.
+				call mark#LoadCommand(0)
+			else
+				" Though there are persistent marks, they have been disabled. We avoid
+				" sourcing the autoload script and its invasive autocmds right now;
+				" maybe the marks are never turned on. We just inform the autoload
+				" script that it should do this once it is sourced on-demand by a
+				" mark mapping or command.
+				let g:mwDoDeferredLoad = 1
+			endif
+		endif
+	endfunction
+
+	augroup MarkInitialization
+		autocmd!
+		" Note: Avoid triggering the autoload unless there actually are persistent
+		" marks. For that, we need to check that g:MARK_MARKS doesn't contain the
+		" empty list representation, and also :execute the :call.
+		autocmd VimEnter * call <SID>AutoLoadMarks()
+	augroup END
+endif
+
+
+
+"- commands -------------------------------------------------------------------
+
+command! -bang -range=0 -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
+command! -bar MarkClear call mark#ClearAll()
+command! -bar Marks call mark#List()
+
+command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad if ! mark#LoadCommand(1, <f-args>) | echoerr ingo#err#Get() | endif
+command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave if ! mark#SaveCommand(<f-args>) | echoerr ingo#err#Get() | endif
+command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr ingo#err#Get()| endif
+command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr ingo#err#Get()| endif
+function! s:SetPalette( paletteName )
+	if type(g:mwDefaultHighlightingPalette) == type([])
+		" Convert the directly defined list to a palette named "default".
+		let g:mwPalettes['default'] = g:mwDefaultHighlightingPalette
+		unlet! g:mwDefaultHighlightingPalette   " Avoid E706.
+	endif
+	let g:mwDefaultHighlightingPalette = a:paletteName
+
+	let l:palette = s:GetPalette()
+	if empty(l:palette)
+		return
+	endif
+
+	call mark#ReInit(s:DefineHighlightings(l:palette, 1))
+	call mark#UpdateScope()
+endfunction
+function! s:MarkPaletteComplete( ArgLead, CmdLine, CursorPos )
+	return sort(filter(keys(g:mwPalettes), 'v:val =~ ''\V\^'' . escape(a:ArgLead, "\\")'))
+endfunction
+command! -bar -nargs=1 -complete=customlist,<SID>MarkPaletteComplete MarkPalette call <SID>SetPalette(<q-args>)
+command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
+
+
+
 "- mappings -------------------------------------------------------------------
 
 nnoremap <silent> <Plug>MarkSet               :<C-u>if ! mark#MarkCurrentWord(v:count)<Bar>execute "normal! \<lt>C-\>\<lt>C-n>\<lt>Esc>"<Bar>endif<CR>
@@ -217,74 +285,6 @@ function! s:MakeDirectGroupMappings()
 endfunction
 call s:MakeDirectGroupMappings()
 delfunction s:MakeDirectGroupMappings
-
-
-
-"- commands -------------------------------------------------------------------
-
-command! -bang -range=0 -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
-command! -bar MarkClear call mark#ClearAll()
-command! -bar Marks call mark#List()
-
-command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkLoad if ! mark#LoadCommand(1, <f-args>) | echoerr ingo#err#Get() | endif
-command! -bar -nargs=? -complete=customlist,mark#MarksVariablesComplete MarkSave if ! mark#SaveCommand(<f-args>) | echoerr ingo#err#Get() | endif
-command! -bar -register MarkYankDefinitions         if ! mark#YankDefinitions(0, <q-reg>) | echoerr ingo#err#Get()| endif
-command! -bar -register MarkYankDefinitionsOneLiner if ! mark#YankDefinitions(1, <q-reg>) | echoerr ingo#err#Get()| endif
-function! s:SetPalette( paletteName )
-	if type(g:mwDefaultHighlightingPalette) == type([])
-		" Convert the directly defined list to a palette named "default".
-		let g:mwPalettes['default'] = g:mwDefaultHighlightingPalette
-		unlet! g:mwDefaultHighlightingPalette   " Avoid E706.
-	endif
-	let g:mwDefaultHighlightingPalette = a:paletteName
-
-	let l:palette = s:GetPalette()
-	if empty(l:palette)
-		return
-	endif
-
-	call mark#ReInit(s:DefineHighlightings(l:palette, 1))
-	call mark#UpdateScope()
-endfunction
-function! s:MarkPaletteComplete( ArgLead, CmdLine, CursorPos )
-	return sort(filter(keys(g:mwPalettes), 'v:val =~ ''\V\^'' . escape(a:ArgLead, "\\")'))
-endfunction
-command! -bar -nargs=1 -complete=customlist,<SID>MarkPaletteComplete MarkPalette call <SID>SetPalette(<q-args>)
-command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
-
-
-
-"- marks persistence ----------------------------------------------------------
-
-if g:mwAutoLoadMarks
-	" As the viminfo is only processed after sourcing of the runtime files, the
-	" persistent global variables are not yet available here. Defer this until Vim
-	" startup has completed.
-	function! s:AutoLoadMarks()
-		if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]'
-			if ! exists('g:MARK_ENABLED') || g:MARK_ENABLED
-				" There are persistent marks and they haven't been disabled; we need to
-				" show them right now.
-				call mark#LoadCommand(0)
-			else
-				" Though there are persistent marks, they have been disabled. We avoid
-				" sourcing the autoload script and its invasive autocmds right now;
-				" maybe the marks are never turned on. We just inform the autoload
-				" script that it should do this once it is sourced on-demand by a
-				" mark mapping or command.
-				let g:mwDoDeferredLoad = 1
-			endif
-		endif
-	endfunction
-
-	augroup MarkInitialization
-		autocmd!
-		" Note: Avoid triggering the autoload unless there actually are persistent
-		" marks. For that, we need to check that g:MARK_MARKS doesn't contain the
-		" empty list representation, and also :execute the :call.
-		autocmd VimEnter * call <SID>AutoLoadMarks()
-	augroup END
-endif
 
 let &cpo = s:save_cpo
 unlet s:save_cpo
