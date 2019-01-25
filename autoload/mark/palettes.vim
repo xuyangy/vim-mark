@@ -2,13 +2,13 @@
 "
 " DEPENDENCIES:
 "
-" Copyright: (C) 2012-2018 Ingo Karkat
+" Copyright: (C) 2012-2019 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 " Contributors: rockybalboa4
 "
-" Version:     2.7.0
+" Version:     3.1.0
 
 function! mark#palettes#Extended()
 	return [
@@ -31,6 +31,8 @@ function! mark#palettes#Extended()
 		\   { 'ctermbg':'Black',      'ctermfg':'Gray',  'guibg':'#131311', 'guifg':'#AAAAAA' },
 		\   { 'ctermbg':'Blue',       'ctermfg':'White', 'guibg':'#0000FF', 'guifg':'#F0F0FF' },
 		\   { 'ctermbg':'DarkRed',    'ctermfg':'White', 'guibg':'#FF0000', 'guifg':'#FFFFFF' },
+		\   { 'ctermbg':'DarkGreen',  'ctermfg':'White', 'guibg':'#00FF00', 'guifg':'#355F35' },
+		\   { 'ctermbg':'DarkYellow', 'ctermfg':'White', 'guibg':'#FFFF00', 'guifg':'#6F6F4C' },
 		\]
 endfunction
 

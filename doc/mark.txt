@@ -562,6 +562,8 @@ HISTORY								*mark-history*
   better coexistence with other customizations that use :match / matchadd().
 - ENH: Allow to disable all default mappings via a single g:mw_no_mappings
   configuration flag.
+- ENH: Appended (strong) green and yellow highlightings to the extended
+  palette.
   *** You need to update to ingo-library (vimscript #4433) version 1.035! ***
 
 3.0.0	18-Sep-2017
@@ -853,7 +855,7 @@ Last version published by Yuheng Xie on vim.org.
 Initial version published by Yuheng Xie on vim.org.
 
 ==============================================================================
-Copyright: (C) 2008-2018 Ingo Karkat
+Copyright: (C) 2008-2019 Ingo Karkat
            (C) 2005-2008 Yuheng Xie
 The VIM LICENSE applies to this plugin; see |copyright|.
 

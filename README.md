@@ -570,6 +570,8 @@ HISTORY
   better coexistence with other customizations that use :match / matchadd().
 - ENH: Allow to disable all default mappings via a single g:mw\_no\_mappings
   configuration flag.
+- ENH: Appended (strong) green and yellow highlightings to the extended
+  palette.
 
 __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.035!__
 
@@ -865,7 +867,7 @@ __PLEASE UPDATE THE
 - Initial version published by Yuheng Xie on vim.org.
 
 ------------------------------------------------------------------------------
-Copyright: (C) 2008-2018 Ingo Karkat -
+Copyright: (C) 2008-2019 Ingo Karkat -
            (C) 2005-2008 Yuheng Xie -
 The [VIM LICENSE](http://vimdoc.sourceforge.net/htmldoc/uganda.html#license) applies to this plugin.
 
