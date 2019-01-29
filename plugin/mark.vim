@@ -1,7 +1,7 @@
 " Script Name: mark.vim
 " Description: Highlight several words in different colors simultaneously.
 "
-" Copyright:   (C) 2008-2018 Ingo Karkat
+" Copyright:   (C) 2008-2019 Ingo Karkat
 "              (C) 2005-2008 Yuheng Xie
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
@@ -67,7 +67,7 @@ if ! exists('g:mwDirectGroupJumpMappingNum')
 endif
 
 if ! exists('g:mwExclusionPredicates')
-	let g:mwExclusionPredicates = [function('mark#DefaultExclusionPredicate')]
+	let g:mwExclusionPredicates = (v:version == 702 && has('patch61') || v:version > 702 ? [function('mark#DefaultExclusionPredicate')] : [])
 endif
 
 if ! exists('g:mwMaxMatchPriority')
