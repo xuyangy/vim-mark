@@ -204,7 +204,7 @@ USAGE
 
     The marks can be kept and restored across Vim sessions, using the viminfo
     file. For this to work, the "!" flag must be part of the 'viminfo' setting:
-        set viminfo+=!  " Save and restore global variables.
+        set viminfo^=!  " Save and restore global variables.
 
     :MarkLoad               Restore the marks from the previous Vim session. All
                             current marks are discarded.
