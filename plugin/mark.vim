@@ -128,7 +128,7 @@ if g:mwAutoLoadMarks
 	" persistent global variables are not yet available here. Defer this until Vim
 	" startup has completed.
 	function! s:AutoLoadMarks()
-		if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && g:MARK_MARKS !=# '[]'
+		if g:mwAutoLoadMarks && exists('g:MARK_MARKS') && ! empty(ingo#plugin#persistence#Load('MARK_MARKS', []))
 			if ! exists('g:MARK_ENABLED') || g:MARK_ENABLED
 				" There are persistent marks and they haven't been disabled; we need to
 				" show them right now.
