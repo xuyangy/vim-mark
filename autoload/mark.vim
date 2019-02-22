@@ -231,7 +231,7 @@ function! mark#UpdateScope( ... )
 	let l:originalWindowLayout = winrestcmd()
 		let l:originalWinNr = winnr()
 		let l:previousWinNr = winnr('#') ? winnr('#') : 1
-			noautocmd windo call call('mark#UpdateMark', a:000)
+			noautocmd keepjumps windo call call('mark#UpdateMark', a:000)
 		noautocmd execute l:previousWinNr . 'wincmd w'
 		noautocmd execute l:originalWinNr . 'wincmd w'
 	silent! execute l:originalWindowLayout

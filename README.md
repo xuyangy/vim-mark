@@ -574,6 +574,8 @@ HISTORY
   palette.
 - Refactoring: Move mark persistence implementation to ingo-library. No need
   to serialize into String type for viminfo beyond Vim 7.3.030.
+- BUG: Avoid creating jump when updating marks. Need to use :keepjumps windo.
+  Reported by epheien.
 
 __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.036!__
 
