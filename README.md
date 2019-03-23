@@ -50,7 +50,7 @@ plugin offers the following advantages over the original:
   commands and mappings for highlighting and searching, uses matchadd(), but
   limits the scope of highlightings to the current window.
 - TempKeyword ([vimscript #4636](http://www.vim.org/scripts/script.php?script_id=4636)) is a simple plugin that can matchadd() the
-  word under the cursor with \0 - \9 mappings. (And clear with \c0 etc.)
+  word under the cursor with \\0 - \\9 mappings. (And clear with \\c0 etc.)
 - simple\_highlighting ([vimscript #4688](http://www.vim.org/scripts/script.php?script_id=4688)) has commands and mappings to highlight
   8 different slots in all buffers.
 - searchmatch ([vimscript #4869](http://www.vim.org/scripts/script.php?script_id=4869)) has commands and mappings for :[1,2,3]match,
@@ -437,7 +437,7 @@ highlighting in a buffer, you can simply
 If the predicate changes after a window has already been visible, you can
 update the mark highlighting by either:
 - switching tab pages back and forth
-- toggling marks on / off (via <Plug>MarkToggle)
+- toggling marks on / off (via &lt;Plug&gt;MarkToggle)
 - :call mark#UpdateMark() (for current buffer)
 - :call mark#UpdateScope() (for all windows in the current tab page)
 
@@ -459,8 +459,8 @@ turn off the creation of the default mappings by defining:
 
 This saves you from mapping dummy keys to all unwanted mapping targets.
 
-You can use different mappings by mapping to the <Plug>Mark... mappings (use
-":map <Plug>Mark" to list them all) before this plugin is sourced.
+You can use different mappings by mapping to the &lt;Plug&gt;Mark... mappings (use
+":map &lt;Plug&gt;Mark" to list them all) before this plugin is sourced.
 
 There are no default mappings for toggling all marks and for the :MarkClear
 command, but you can define some yourself:
@@ -504,7 +504,7 @@ If you need more / less groups, this can be configured via:
     let g:mwDirectGroupJumpMappingNum = 20
 
 Set to 0 to completely turn off the keypad mappings. This is easier than
-remapping all <Plug>-mappings.
+remapping all &lt;Plug&gt;-mappings.
 
 As an alternative to the direct group searches, you can also define mappings
 that search a next / previous used group:
@@ -513,17 +513,17 @@ that search a next / previous used group:
     nmap <Leader>-* <Plug>MarkSearchUsedGroupPrev
 
 Some people like to create a mark based on the visual selection, like
-v\_<Leader>m, but have whitespace in the selection match any whitespace when
-searching (searching for "hello world" will also find "hello<Tab>world" as
+v\_&lt;Leader&gt;m, but have whitespace in the selection match any whitespace when
+searching (searching for "hello world" will also find "hello&lt;Tab&gt;world" as
 well as "hello" at the end of a line, with "world" at the start of the next
 line). The Vim Tips Wiki describes such a setup for the built-in search at
     http://vim.wikia.com/wiki/Search_for_visually_selected_text
-You can achieve the same with the Mark plugin through the <Plug>MarkIWhiteSet
-mapping target: Using this, you can assign a new visual mode mapping <Leader>\*
+You can achieve the same with the Mark plugin through the &lt;Plug&gt;MarkIWhiteSet
+mapping target: Using this, you can assign a new visual mode mapping &lt;Leader&gt;\*
 
     xmap <Leader>* <Plug>MarkIWhiteSet
 
-or override the default v\_<Leader>m mapping, in case you always want this
+or override the default v\_&lt;Leader&gt;m mapping, in case you always want this
 behavior:
 
     vmap <Plug>IgnoreMarkSet <Plug>MarkSet
@@ -544,7 +544,7 @@ LIMITATIONS
 - If the 'ignorecase' setting is changed, there will be discrepancies between
   the highlighted marks and subsequent jumps to marks.
 - If {pattern} in a :Mark command contains atoms that change the semantics of
-  the entire (/\c, /\C) regular expression, there may be discrepancies
+  the entire (/\\c, /\\C) regular expression, there may be discrepancies
   between the highlighted marks and subsequent jumps to marks.
 
 ### CONTRIBUTING
@@ -555,13 +555,13 @@ https://github.com/inkarkat/vim-mark/issues or email (address below).
 HISTORY
 ------------------------------------------------------------------------------
 
-##### 3.1.0   RELEASEME
-- ENH: Handle magicness atoms (\V, \m) in regexps entered via <Leader>r or
+##### 3.1.0   23-Mar-2019
+- ENH: Handle magicness atoms (\\V, \\m) in regexps entered via &lt;Leader&gt;r or
   :Mark /{pattern}/.
 - ENH: Choose a more correct insertion point with multiple alternatives for a
   mark by projecting the length of the existing and alternatives and the added
   pattern.
-- BUG: Regression: <Leader>n without {N} and not on an existing mark prints
+- BUG: Regression: &lt;Leader&gt;n without {N} and not on an existing mark prints
   error "Do not pass empty pattern to disable all marks".
 - ENH: Allow to exclude certain tab pages, windows, or buffers / filetypes
   from showing mark highlightings via g:mwExclusionPredicates or (with the
@@ -590,11 +590,11 @@ __You need to update to ingo-library ([vimscript #4433](http://www.vim.org/scrip
   the :Mark commands into a local vimrc) or occasions (by defining a custom
   command or mapping with these commands), and are an alternative to
   :MarkSave/Load.
-- ENH: Add <Plug>MarkSearchUsedGroupNext and <Plug>MarkSearchUsedGroupPrev to
+- ENH: Add &lt;Plug&gt;MarkSearchUsedGroupNext and &lt;Plug&gt;MarkSearchUsedGroupPrev to
   search in a next / previous used group. Suggested by Louis Pan.
-- ENH: Add <Plug>MarkSearchCascadeStartWithStop,
-  <Plug>MarkSearchCascadeNextWithStop, <Plug>MarkSearchCascadeStartNoStop,
-  <Plug>MarkSearchCascadeNextNoStop to search in cascading mark groups, i.e.
+- ENH: Add &lt;Plug&gt;MarkSearchCascadeStartWithStop,
+  &lt;Plug&gt;MarkSearchCascadeNextWithStop, &lt;Plug&gt;MarkSearchCascadeStartNoStop,
+  &lt;Plug&gt;MarkSearchCascadeNextNoStop to search in cascading mark groups, i.e.
   first all matches for group 1, then all for group 2, and so on.
 - CHG: Duplicate mark#GetNum() and mark#GetGroupNum(). Rename the former into
   mark#GetCount() and have it return the number of actually defined (i.e.
@@ -610,12 +610,12 @@ __You need to separately
   install ingo-library ([vimscript #4433](http://www.vim.org/scripts/script.php?script_id=4433)) version 1.020 (or higher)!__
 
 ##### 2.8.5   29-Oct-2014
-- ENH: Add alternative <Plug>MarkConfirmAllClear optional command that works
-  like <Plug>MarkAllClear, but with confirmation. Thanks to Marcelo Montu for
+- ENH: Add alternative &lt;Plug&gt;MarkConfirmAllClear optional command that works
+  like &lt;Plug&gt;MarkAllClear, but with confirmation. Thanks to Marcelo Montu for
   suggesting this!
 
 ##### 2.8.4   19-Jun-2014
-- To avoid accepting an invalid regular expression (e.g. "\(blah") and then
+- To avoid accepting an invalid regular expression (e.g. "\\(blah") and then
   causing ugly errors on every mark update, check the patterns passed by the
   user for validity.
 - CHG: The :Mark command doesn't query for a mark when the passed mark group
@@ -625,7 +625,7 @@ __You need to separately
 ##### 2.8.3   23-May-2014
 - The additional mapping described under :help mark-whitespace-indifferent got
   broken again by the refactoring of mark#DoMark() on 31-Jan-2013. Finally
-  include this in the script as <Plug>MarkIWhiteSet and
+  include this in the script as &lt;Plug&gt;MarkIWhiteSet and
   mark#GetVisualSelectionAsLiteralWhitespaceIndifferentPattern(). Thanks to
   Greg Klein for noticing and prodding me to include it.
 
@@ -637,20 +637,20 @@ __You need to separately
 - Allow to override the adding to existing marks via :[N]Mark! {pattern}.
 - ENH: Implement command completion for :[N]Mark that offers existing mark
   patterns (from group [N] / all groups), both as one regular expression and
-  individual alternatives. The leading \< can be omitted.
+  individual alternatives. The leading \\&lt; can be omitted.
 
 ##### 2.8.0   01-Jun-2013
-- Also allow a [count] for <Leader>r to select (or query for) a mark group, as
-  with <Leader>m.
+- Also allow a [count] for &lt;Leader&gt;r to select (or query for) a mark group, as
+  with &lt;Leader&gt;m.
 - CHG: Also set the current mark to the used mark group when a mark was set
-  via <Leader>r and :Mark so that it is easier to determine whether the
+  via &lt;Leader&gt;r and :Mark so that it is easier to determine whether the
   entered pattern actually matches anywhere. Thanks to Xiaopan Zhang for
   notifying me about this problem.
-- Add <Plug>MarkSearchGroupNext / <Plug>MarkSearchGroupPrev to enable
+- Add &lt;Plug&gt;MarkSearchGroupNext / &lt;Plug&gt;MarkSearchGroupPrev to enable
   searching for particular mark groups. Thanks to Xiaopan Zhang for the
   suggestion.
 - Define default mappings for keys 1-9 on the numerical keypad to jump to a
-  particular group (backwards with <C-kN>). Their definition is controlled by
+  particular group (backwards with &lt;C-kN&gt;). Their definition is controlled by
   the new g:mwDirectGroupJumpMappingNum variable.
 - ENH: Allow to store an arbitrary number of marks via named slots that can
   optionally be passed to :MarkLoad / :MarkSave. If the slot is all-uppercase,
@@ -664,8 +664,8 @@ __You need to separately
 
 ##### 2.7.1   14-Sep-2012
 - Enable alternative \* / # mappings that do not remember the last search type
-  through new <Plug>MarkSearchOrCurNext, <Plug>MarkSearchOrCurPrev,
-  <Plug>MarkSearchOrAnyNext, <Plug>MarkSearchOrAnyPrev mappings. Based on an
+  through new &lt;Plug&gt;MarkSearchOrCurNext, &lt;Plug&gt;MarkSearchOrCurPrev,
+  &lt;Plug&gt;MarkSearchOrAnyNext, &lt;Plug&gt;MarkSearchOrAnyPrev mappings. Based on an
   inquiry from Kevin Huanpeng Du.
 
 ##### 2.7.0   04-Jul-2012
@@ -674,7 +674,7 @@ __You need to separately
 - Add "maximum" palette contributed by rockybalboa4.
 
 ##### 2.6.5   24-Jun-2012
-- Don't define the default <Leader>m and <Leader>r mappings in select mode,
+- Don't define the default &lt;Leader&gt;m and &lt;Leader&gt;r mappings in select mode,
   just visual mode. Thanks to rockybalboa4 for pointing this out.
 
 ##### 2.6.4   23-Apr-2012
@@ -691,21 +691,21 @@ __You need to separately
 ##### 2.6.2   26-Mar-2012
 - ENH: When a [count] exceeding the number of available mark groups is given,
   a summary of marks is given and the user is asked to select a mark group.
-  This allows to interactively choose a color via 99<Leader>m.
+  This allows to interactively choose a color via 99&lt;Leader&gt;m.
   If you use the mark-whitespace-indifferent mappings,
 
 __PLEASE UPDATE THE
-  vnoremap <Plug>MarkWhitespaceIndifferent DEFINITION__
+  vnoremap &lt;Plug&gt;MarkWhitespaceIndifferent DEFINITION__
 - ENH: Include count of alternative patterns in :Marks list.
-- CHG: Use ">" for next mark and "/" for last search in :Marks.
+- CHG: Use "&gt;" for next mark and "/" for last search in :Marks.
 
 ##### 2.6.1   23-Mar-2012
 - ENH: Add :Marks command that prints all mark highlight groups and their
   search patterns, plus information about the current search mark, next mark
   group, and whether marks are disabled.
 - ENH: Show which mark group a pattern was set / added / removed / cleared.
-- FIX: When the cursor is positioned on the current mark, [N]<Leader>n /
-  <Plug>MarkClear with [N] appended the pattern for the current mark (again
+- FIX: When the cursor is positioned on the current mark, [N]&lt;Leader&gt;n /
+  &lt;Plug&gt;MarkClear with [N] appended the pattern for the current mark (again
   and again) instead of clearing it. Must not pass current mark pattern when
   [N] is given.
 - CHG: Show mark group number in same-mark search and rename search types from
@@ -713,12 +713,12 @@ __PLEASE UPDATE THE
   and "mark-N!", respectively.
 
 ##### 2.6.0   22-Mar-2012
-- ENH: Allow [count] for <Leader>m and :Mark to add / subtract match to / from
-  highlight group [count], and use [count]<Leader>n to clear only highlight
+- ENH: Allow [count] for &lt;Leader&gt;m and :Mark to add / subtract match to / from
+  highlight group [count], and use [count]&lt;Leader&gt;n to clear only highlight
   group [count]. This was also requested by Philipp Marek.
-- FIX: :Mark and <Leader>n actually toggled marks back on when they were
+- FIX: :Mark and &lt;Leader&gt;n actually toggled marks back on when they were
   already off. Now, they stay off on multiple invocations. Use :call
-  mark#Toggle() / <Plug>MarkToggle if you want toggling.
+  mark#Toggle() / &lt;Plug&gt;MarkToggle if you want toggling.
 
 ##### 2.5.3   02-Mar-2012
 - BUG: Version check mistakenly excluded Vim 7.1 versions that do have the
@@ -732,7 +732,7 @@ __PLEASE UPDATE THE
 - FIX: Wrong logic for determining l:isWrapped lets wrap-around go undetected.
 
 ##### 2.5.1   17-May-2011
-- FIX: == comparison in s:DoMark() leads to wrong regexp (\A vs. \a) being
+- FIX: == comparison in s:DoMark() leads to wrong regexp (\\A vs. \\a) being
   cleared when 'ignorecase' is set. Use case-sensitive comparison ==# instead.
 - Refine :MarkLoad messages
 - Add whitespace-indifferent visual mark configuration example. Thanks to Greg
@@ -743,14 +743,14 @@ __PLEASE UPDATE THE
   automatic persistence via the g:mwAutoLoadMarks and g:mwAutoSaveMarks
   configuration flags. (Request from Mun Johl, 16-Apr-2010)
 - Expose toggling of mark display (keeping the mark patterns) via new
-  <Plug>MarkToggle mapping. Offer :MarkClear command as a replacement for the
+  &lt;Plug&gt;MarkToggle mapping. Offer :MarkClear command as a replacement for the
   old argumentless :Mark command, which now just disables, but not clears all
   marks.
 
 ##### 2.4.4   18-Apr-2011
 - BUG: Include trailing newline character in check for current mark, so that a
-  mark that matches the entire line (e.g. created by V<Leader>m) can be
-  cleared via <Leader>n. Thanks to ping for reporting this.
+  mark that matches the entire line (e.g. created by V&lt;Leader&gt;m) can be
+  cleared via &lt;Leader&gt;n. Thanks to ping for reporting this.
 - FIX: On overlapping marks, mark#CurrentMark() returned the lowest, not the
   highest visible mark. So on overlapping marks, the one that was not visible
   at the cursor position was removed; very confusing! Use reverse iteration
@@ -775,23 +775,23 @@ __PLEASE UPDATE THE
 
 ##### 2.4.1   13-Jan-2011
 - FIX: Using a named register for capturing the visual selection on
-  {Visual}<Leader>m and {Visual}<Leader>r clobbered the unnamed register. Now
+  {Visual}&lt;Leader&gt;m and {Visual}&lt;Leader&gt;r clobbered the unnamed register. Now
   using the unnamed register.
 
 ##### 2.4.0   13-Jul-2010
-- ENH: The MarkSearch mappings (<Leader>[\*#/?]) add the original cursor
+- ENH: The MarkSearch mappings (&lt;Leader&gt;[\*#/?]) add the original cursor
   position to the jump list, like the built-in [/?\*#nN] commands. This allows
   to use the regular jump commands for mark matches, like with regular search
   matches.
 
 ##### 2.3.3   19-Feb-2010
-- BUG: Clearing of an accidental zero-width match (e.g. via :Mark \zs) results
+- BUG: Clearing of an accidental zero-width match (e.g. via :Mark \\zs) results
   in endless loop. Thanks to Andy Wokula for the patch.
 
 ##### 2.3.2   17-Nov-2009
-- BUG: Creation of literal pattern via '\V' in {Visual}<Leader>m mapping
-  collided with individual escaping done in <Leader>m mapping so that an
-  escaped '\\*' would be interpreted as a multi item when both modes are used
+- BUG: Creation of literal pattern via '\\V' in {Visual}&lt;Leader&gt;m mapping
+  collided with individual escaping done in &lt;Leader&gt;m mapping so that an
+  escaped '\\\*' would be interpreted as a multi item when both modes are used
   for marking. Thanks to Andy Wokula for the patch.
 
 ##### 2.3.1   06-Jul-2009
@@ -826,7 +826,7 @@ __PLEASE UPDATE THE
   zero-based, but the syntax groups "MarkWordx" are still one-based.
 - Factored :syntax operations out of s:DoMark() and s:UpdateMark() so that
   they can all be done in a single :windo.
-- Normal mode <Plug>MarkSet now has the same semantics as its visual mode
+- Normal mode &lt;Plug&gt;MarkSet now has the same semantics as its visual mode
   cousin: If the cursor is on an existing mark, the mark is removed.
   Beforehand, one could only remove a visually selected mark via again
   selecting it. Now, one simply can invoke the mapping when on such a mark.
@@ -835,7 +835,7 @@ __PLEASE UPDATE THE
 - Publication of improved version by Ingo Karkat.
 - Now prepending search type ("any-mark", "same-mark", "new-mark") for better
   identification.
-- Retired the algorithm in s:PrevWord in favor of simply using <cword>, which
+- Retired the algorithm in s:PrevWord in favor of simply using &lt;cword&gt;, which
   makes mark.vim work like the \* command. At the end of a line, non-keyword
   characters may now be marked; the previous algorithm preferred any preceding
   word.
@@ -847,12 +847,12 @@ __PLEASE UPDATE THE
 
 ##### 1.5.0   01-Sep-2008
 - Bug fixes and enhancements by Ingo Karkat.
-- Added <Plug>MarkAllClear (without a default mapping), which clears all
+- Added &lt;Plug&gt;MarkAllClear (without a default mapping), which clears all
   marks, even when the cursor is on a mark.
-- Added <Plug>... mappings for hard-coded \\*, \#, \/, \?, \* and #, to allow
-  re-mapping and disabling. Beforehand, there were some <Plug>... mappings
+- Added &lt;Plug&gt;... mappings for hard-coded \\\*, \\#, \\/, \\?, \* and #, to allow
+  re-mapping and disabling. Beforehand, there were some &lt;Plug&gt;... mappings
   and hard-coded ones; now, everything can be customized.
-- BF: Using :autocmd without <bang> to avoid removing _all_ autocmds for the
+- BF: Using :autocmd without &lt;bang&gt; to avoid removing _all_ autocmds for the
   BufWinEnter event. (Using a custom :augroup would be even better.)
 - BF: Explicitly defining s:current\_mark\_position; some execution paths left
   it undefined, causing errors.
@@ -875,4 +875,4 @@ Copyright: (C) 2008-2019 Ingo Karkat -
            (C) 2005-2008 Yuheng Xie -
 The [VIM LICENSE](http://vimdoc.sourceforge.net/htmldoc/uganda.html#license) applies to this plugin.
 
-Maintainer:     Ingo Karkat <ingo@karkat.de>
+Maintainer:     Ingo Karkat &lt;ingo@karkat.de&gt;
