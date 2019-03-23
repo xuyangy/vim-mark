@@ -5,29 +5,12 @@
 "	- ingo/err.vim autoload script
 "	- ingo/msg.vim autoload script
 "
-" Copyright: (C) 2015 Ingo Karkat
+" Copyright: (C) 2015-2018 Ingo Karkat
 "   The VIM LICENSE applies to this script; see ':help copyright'.
 "
 " Maintainer:	Ingo Karkat <ingo@karkat.de>
 "
 " Version:     3.0.0
-" Changes:
-" 19-May-2015, Ingo Karkat
-" - Add case for reversing search direction immediately after a cascade to the
-"   next group.
-" - Store visited buffers, and instead of re-searching such with the current
-"   mark group, cascade to the next one. This allows sequential iteration by
-"   mark group over multiple buffers.
-" - Retire mark#WarningMsg().
-"
-" 18-May-2015, Ingo Karkat
-" - Change jumping behavior when starting cascade.
-" - Fix off-by-one switch in mark group in cascading search when reversing
-"   direction by introducing s:cascadingIsBackward and special handling when
-"   encountering the cascading position with a reversed search.
-"
-" 16-May-2015, Ingo Karkat
-" - Move functions for cascading search into seperate autoload script.
 
 let [s:cascadingLocation, s:cascadingPosition, s:cascadingGroupIndex, s:cascadingIsBackward, s:cascadingStop] = [[], [], -1, -1, -1]
 function! s:GetLocation()
