@@ -32,6 +32,10 @@ plugin offers the following advantages over the original:
   start command \*, extends it to visual mode (like Mark) and has auto-search
   functionality which instantly highlights the word under the cursor when
   typing or moving around, like in many IDEs.
+- MarkMarkup.vim ([vimscript #5777](http://www.vim.org/scripts/script.php?script_id=5777)) extends mark.vim with rendering the
+  highlightings as markup directly inside the text: as HTML &lt;span&gt; tags that
+  reproduce the mark's colors, or as appended numbers or symbols and a legend
+  to look up the mark names. Any markup-based export format can be defined.
 
 ### RELATED WORKS
 
