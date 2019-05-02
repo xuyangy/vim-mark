@@ -551,6 +551,10 @@ https://github.com/inkarkat/vim-mark/issues or email (address below).
 ==============================================================================
 HISTORY								*mark-history*
 
+3.1.1	RELEASEME
+- Compatibility: After Vim 8.1.1241, a :range outside the number of buffers
+  (e.g. :99Mark[Name]) causes an error.
+
 3.1.0	23-Mar-2019
 - ENH: Handle magicness atoms (\V, \m) in regexps entered via <Leader>r or
   :Mark /{pattern}/.

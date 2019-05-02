@@ -157,7 +157,13 @@ endif
 
 "- commands -------------------------------------------------------------------
 
-command! -bang -range=0 -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
+let s:hasArgumentAddressing = (v:version == 704 && has('patch530') || v:version > 704)
+
+if s:hasArgumentAddressing
+	command! -bang -range=0 -addr=other -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
+else
+	command! -bang -range=0             -nargs=? -complete=customlist,mark#Complete Mark if <bang>0 | silent call mark#DoMark(<count>, '') | endif | if ! mark#SetMark(<count>, <f-args>)[0] | echoerr ingo#err#Get() | endif
+endif
 command! -bar MarkClear call mark#ClearAll()
 command! -bar Marks call mark#List()
 
@@ -185,7 +191,13 @@ function! s:MarkPaletteComplete( ArgLead, CmdLine, CursorPos )
 	return sort(filter(keys(g:mwPalettes), 'v:val =~ ''\V\^'' . escape(a:ArgLead, "\\")'))
 endfunction
 command! -bar -nargs=1 -complete=customlist,<SID>MarkPaletteComplete MarkPalette call <SID>SetPalette(<q-args>)
-command! -bar -bang -range=0 -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
+if s:hasArgumentAddressing
+	command! -bar -bang -range=0 -addr=other -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
+else
+	command! -bar -bang -range=0             -nargs=? MarkName if ! mark#SetName(<bang>0, <count>, <q-args>) | echoerr ingo#err#Get() | endif
+endif
+
+unlet s:hasArgumentAddressing
 
 
 
