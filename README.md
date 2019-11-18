@@ -189,7 +189,9 @@ USAGE
                             belonging to highlight group 1..9.
                             Note that these commands only work in GVIM or if your
                             terminal sends different key codes; sadly, most still
-                            don't. The "Num Lock" indicator of your keyboard has
+                            don't.
+                            https://unix.stackexchange.com/questions/552297/make-gnome-terminal-send-correct-numeric-keypad-keycodes-to-vim
+                            The "Num Lock" indicator of your keyboard has
                             to be ON; otherwise, the keypad is used for cursor
                             movement. If the keypad doesn't work for you, you can
                             still remap these mappings to alternatives; see below.
