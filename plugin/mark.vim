@@ -60,6 +60,12 @@ if ! exists('g:mwPalettes')
 	\	'extended': function('mark#palettes#Extended'),
 	\	'maximum': function('mark#palettes#Maximum')
 	\}
+	if has('gui_running')
+		call extend(g:mwPalettes, {
+		\	'soft': function('mark#palettes#Soft'),
+		\	'softer': function('mark#palettes#Softer'),
+		\})
+	endif
 endif
 
 if ! exists('g:mwDirectGroupJumpMappingNum')
